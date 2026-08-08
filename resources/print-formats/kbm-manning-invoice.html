@@ -1,0 +1,183 @@
+{#-
+  Manning invoice for vessel owners, laid out like the Word template KBM has
+  always sent: addressee block, the crew the invoice covers, then the charges.
+
+  Reads four custom fields on Sales Invoice — custom_vessel, custom_invoice_scope,
+  custom_attn, custom_cc — and the custom_crew_list child table.
+-#}
+
+{%- set months = {1: 'Januari', 2: 'Februari', 3: 'Maret', 4: 'April', 5: 'Mei', 6: 'Juni',
+                  7: 'Juli', 8: 'Agustus', 9: 'September', 10: 'Oktober', 11: 'November', 12: 'Desember'} -%}
+{%- set posted = frappe.utils.getdate(doc.posting_date) -%}
+
+{#- Owners read these in the Indonesian convention: 1.165, not 1,165. -#}
+{%- macro usd(value) -%}
+    {%- set amount = value | float -%}
+    {%- if amount == amount | round(0) -%}
+        {{ "{:,.0f}".format(amount) | replace(",", ".") }}
+    {%- else -%}
+        {{ "{:,.2f}".format(amount) | replace(",", "|") | replace(".", ",") | replace("|", ".") }}
+    {%- endif -%}
+{%- endmacro -%}
+
+{#- Manning fee invoices bill the crew already onboard; on-signer invoices bill the
+    cost of getting a joiner to the ship. The heading wording follows from that. -#}
+{%- set onboard = doc.custom_invoice_scope != 'On Signer' -%}
+{%- set charge = 'Manning fee' if onboard else 'Cost' -%}
+{%- set vessel = doc.custom_vessel or doc.customer_name -%}
+
+<div class="kbm-invoice">
+
+    <table class="head">
+        <tr>
+            <td>No.: <strong>{{ doc.name }}</strong></td>
+            <td class="right">Date : {{ posted.day }} {{ months[posted.month] }} {{ posted.year }}</td>
+        </tr>
+    </table>
+
+    <p class="to">
+        To.: Owner Of {{ vessel }}<br>
+        Attn: {{ doc.custom_attn or 'Finance Department' }}
+        {%- if doc.custom_cc %}<br>Cc: {{ doc.custom_cc }}{% endif %}
+    </p>
+
+    <p>Dear Sir / Madam</p>
+
+    <p class="intro">Following quotation of {{ charge }} and other expenses :</p>
+
+    <table class="items">
+        <thead>
+            <tr>
+                <th class="no">No</th>
+                <th class="desc">Description</th>
+                <th class="num">Amount<br>(USD)</th>
+                <th class="num">Total<br>(USD)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {%- if doc.custom_crew_list %}
+            <tr>
+                <td colspan="4" class="crew">
+                    <strong>VESSEL {{ vessel }} : {{ 'Onboard Crews' if onboard else 'On Signer' }},</strong><br>
+                    The Name of Crew,
+                    <ol>
+                        {%- for crew in doc.custom_crew_list %}
+                        <li>{{ crew.crew_name }}{% if crew.rank %} / {{ crew.rank }}{% endif %}</li>
+                        {%- endfor %}
+                    </ol>
+                </td>
+            </tr>
+            {%- endif %}
+            <tr>
+                <td colspan="4" class="detail">Detail {{ charge }} and other expenses :</td>
+            </tr>
+            {%- for item in doc.items %}
+            <tr>
+                <td class="no">{{ loop.index }}</td>
+                <td class="desc">
+                    {{ item.item_name }}
+                    {%- if item.qty %} ({{ item.qty | int if item.qty == item.qty | round(0) else item.qty }} {{ item.uom }}){% endif %}
+                </td>
+                <td class="num">@{{ usd(item.rate) }}</td>
+                <td class="num">{{ usd(item.amount) }}</td>
+            </tr>
+            {%- endfor %}
+            <tr class="total">
+                <td colspan="3" class="right">Total Amount</td>
+                <td class="num">{{ usd(doc.grand_total) }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    {#- in_words arrives as "USD One Thousand ... only"; the house style is different. -#}
+    {%- set words = (doc.in_words or '') | replace('USD ', '') | replace(' only', '') | trim %}
+    <p class="words">( Stay in USD, {{ words }} Dollar Only )</p>
+
+    <p>Kindly to remit the total amount to our account bank as follow :</p>
+
+    {#- Remittance details come from the company's Bank Account, so changing the
+        account changes every invoice rather than this template. -#}
+    {%- set accounts = frappe.get_all('Bank Account',
+            filters={'company': doc.company, 'is_company_account': 1, 'disabled': 0},
+            fields=['name', 'account_name', 'bank', 'bank_account_no', 'branch_code'],
+            order_by='is_default desc', limit_page_length=1) -%}
+
+    {%- if accounts %}
+    {%- set account = accounts[0] -%}
+    {%- set swift = frappe.db.get_value('Bank', account.bank, 'swift_number') -%}
+    {#- An Address attaches through Dynamic Link, so the link table is the way in. -#}
+    {%- set address = frappe.db.get_value('Dynamic Link',
+            {'link_doctype': 'Bank Account', 'link_name': account.name, 'parenttype': 'Address'}, 'parent') -%}
+    {%- set street = frappe.db.get_value('Address', address, 'address_line1') if address else None -%}
+    {%- set currency = frappe.db.get_value('Account', frappe.db.get_value('Bank Account', account.name, 'account'), 'account_currency') -%}
+
+    <table class="bank">
+        <tr><td>Beneficiary Name</td><td>: {{ account.account_name | upper }}</td></tr>
+        <tr><td>Bank Name</td><td>: {{ frappe.db.get_value('Bank', account.bank, 'bank_name') | upper }}</td></tr>
+        {%- if account.branch_code %}
+        <tr><td>Branch</td><td>: {{ account.branch_code }}
+            {%- if street %}<br>&nbsp;&nbsp;{{ street }}{% endif %}</td></tr>
+        {%- endif %}
+        <tr><td>Account No.</td><td>: {{ account.bank_account_no }}{% if currency %} ( {{ currency | upper }} ONLY ){% endif %}</td></tr>
+        {%- if swift %}
+        <tr><td>Swift Bank Code</td><td>: {{ swift }}</td></tr>
+        {%- endif %}
+    </table>
+    {%- endif %}
+
+    <p>Thank you for your kind attention and cooperation.</p>
+
+    {#- __SIGNATURE_URL__ is substituted with the uploaded file url when seeded. -#}
+    <img src="__SIGNATURE_URL__" class="signature" alt="Best Regards">
+
+
+</div>
+
+<style>
+    .kbm-invoice {
+        font-family: Calibri, Carlito, Arial, sans-serif;
+        font-size: 11pt;
+        color: #000;
+    }
+
+    .kbm-invoice p { margin: 8px 0; }
+    .kbm-invoice .intro { text-indent: 40px; }
+    .kbm-invoice .to { line-height: 1.4; }
+    .kbm-invoice .right { text-align: right; }
+
+    .kbm-invoice table.head { width: 100%; margin-bottom: 12px; }
+    .kbm-invoice table.head td { vertical-align: top; }
+
+    .kbm-invoice table.items {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 10px 0;
+    }
+
+    .kbm-invoice table.items th,
+    .kbm-invoice table.items td {
+        border: 1px solid #000;
+        padding: 4px 6px;
+        vertical-align: top;
+    }
+
+    .kbm-invoice table.items th { text-align: center; font-weight: bold; }
+    .kbm-invoice table.items .no { width: 34px; text-align: center; }
+    .kbm-invoice table.items .num { width: 90px; text-align: right; }
+    .kbm-invoice table.items .crew ol { margin: 4px 0 0 18px; padding: 0; }
+    .kbm-invoice table.items .crew li { line-height: 1.35; }
+    .kbm-invoice table.items .detail { font-style: italic; }
+    .kbm-invoice table.items tr.total td { font-weight: bold; }
+
+    .kbm-invoice .words { text-align: center; font-style: italic; }
+
+    .kbm-invoice table.bank { margin: 6px 0 6px 20px; }
+    .kbm-invoice table.bank td { padding: 1px 4px 1px 0; vertical-align: top; }
+    .kbm-invoice table.bank td:first-child { white-space: nowrap; }
+
+    .kbm-invoice .signature { height: 110px; margin-top: 6px; }
+
+    /* A crew list can push the charges onto a second page; keep them together. */
+    .kbm-invoice table.items { page-break-inside: auto; }
+    .kbm-invoice table.items tr { page-break-inside: avoid; }
+</style>
