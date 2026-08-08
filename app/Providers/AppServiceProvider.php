@@ -49,7 +49,7 @@ class AppServiceProvider extends ServiceProvider
         // The signed-in "user" is an ERP HPY session, not an Eloquent model, so the
         // policies are wired up as guest-allowed gates that read that session.
         // Recruitment and assignments follow the same rules as the Candidate Pool.
-        foreach (['candidates', 'applications', 'assignments', 'vessels'] as $subject) {
+        foreach (['candidates', 'applications', 'assignments', 'vessels', 'profitability', 'accounting'] as $subject) {
             foreach (['viewAny', 'view', 'create', 'update', 'delete'] as $ability) {
                 Gate::define("{$subject}.{$ability}", fn (?Authenticatable $user = null) => app(CrewCandidatePolicy::class)->{$ability}());
             }

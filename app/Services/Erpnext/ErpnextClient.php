@@ -265,6 +265,50 @@ class ErpnextClient
         ];
     }
 
+    /**
+     * Run one of ERP HPY's own reports and hand back what it produced.
+     *
+     * The financial statements are query reports, not doctypes: there is nothing to
+     * list. Running them here rather than reimplementing the arithmetic means the app
+     * and the ERP desk can never disagree about what the ledger says.
+     *
+     * `ignore_prepared_report` keeps the answer synchronous — a prepared report would
+     * come back as a job id and an empty table.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array{columns: array<int, mixed>, result: array<int, mixed>}
+     */
+    public function report(string $report, array $filters): array
+    {
+        $message = $this->send(fn (PendingRequest $r) => $r->get('/api/method/frappe.desk.query_report.run', [
+            'report_name' => $report,
+            'filters' => json_encode($filters),
+            'ignore_prepared_report' => 1,
+            'are_default_filters' => 'false',
+        ]))->json('message', []);
+
+        return [
+            'columns' => $message['columns'] ?? [],
+            'result' => $message['result'] ?? [],
+        ];
+    }
+
+    /**
+     * Call a whitelisted server method.
+     *
+     * Some things are not a document write and cannot be done through the resource
+     * API — cancelling is the one that matters here: writing docstatus 2 straight onto
+     * a document skips the unlinking ERP HPY does on a real cancel, and the delete
+     * that follows is then refused.
+     *
+     * @param  array<string, mixed>  $params
+     * @return array<string, mixed>
+     */
+    public function call(string $method, array $params = []): array
+    {
+        return $this->send(fn (PendingRequest $r) => $r->post('/api/method/' . $method, $params))->json() ?? [];
+    }
+
     public function delete(string $doctype, string $name): void
     {
         $this->send(fn (PendingRequest $r) => $r->delete("/api/resource/{$doctype}/" . rawurlencode($name)));

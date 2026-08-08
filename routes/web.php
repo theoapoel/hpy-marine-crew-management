@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccountingController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\CrewApplicationController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\ErpFileController;
 use App\Http\Controllers\PrincipalController;
 use App\Http\Controllers\VesselController;
+use App\Http\Controllers\VesselProfitabilityController;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -75,6 +77,17 @@ Route::middleware(['erpnext', 'erpnext.company'])->group(function () {
     // Fleet, kept in the ERP HPY "Vessel" doctype.
     Route::resource('vessels', VesselController::class)->except('show');
     Route::get('vessels/{vessel}', [VesselController::class, 'show'])->name('vessels.show');
+
+    // Vessel Profitability — read through the Project doctype, one project per
+    // contract/charter, linked to the ship by Project.vessel.
+    Route::get('profitability', [VesselProfitabilityController::class, 'index'])->name('profitability.index');
+    Route::get('profitability/vessel/{vessel}', [VesselProfitabilityController::class, 'vessel'])->name('profitability.vessel');
+    Route::get('profitability/project/{project}', [VesselProfitabilityController::class, 'project'])->name('profitability.project');
+
+    // Accounting — ERP HPY's own financial reports, rendered here.
+    Route::get('accounting/{report}', [AccountingController::class, 'show'])
+        ->whereIn('report', array_keys(App\Services\Erpnext\FinancialReports::REPORTS))
+        ->name('accounting');
 
     Route::get('documents/{view}', [DocumentController::class, 'index'])
         ->whereIn('view', array_keys(DocumentController::VIEWS))

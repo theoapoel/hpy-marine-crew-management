@@ -20,8 +20,42 @@ marine doctypes (Vessel, Rank, Vessel Certificate). Each command is idempotent.
 | `php artisan erp:sync-candidate-doctype` | `Crew Candidate` + `Crew Candidate COP` |
 | `php artisan erp:sync-vessel-types` | `Vessel Type` + `Vessel Certificate Type`, and re-points the fields at them |
 | `php artisan erp:sync-principal-doctype` | `Principal` + `Principal Contact Person` + `Vessel.principal` |
+| `php artisan erp:sync-project-fields` | `Project.vessel` — the link Vessel Profitability reads through |
 
-Sample data: `erp:seed-vessels`, `erp:seed-crew-documents`.
+Sample data: `erp:seed-vessels`, `erp:seed-crew-documents`, `erp:seed-vessel-profitability`.
+
+## Vessel Profitability
+
+A vessel earns and spends through **Projects** — one per contract, charter or voyage,
+so one ship has many projects — tied to the ship by the custom `Project.vessel` link.
+
+The figures are not read off Project's own costing fields. They are added up from the
+documents, so every number opens down to the invoice or journal entry behind it:
+
+| Source | Side | Component from |
+| --- | --- | --- |
+| `Sales Invoice Item` | revenue | item group |
+| `Purchase Invoice Item` | cost | item group |
+| `Journal Entry Account` | cost | account — **crew cost is allocated this way for now** |
+
+Two rules keep the totals honest: only submitted documents count (`docstatus = 1`), and
+amounts are read in company currency (`base_net_amount`, `debit`/`credit`) so a USD
+charter and an IDR repair bill can be added together.
+
+The keyword → component mapping lives in `config/profitability.php`; changing how a
+yard bill is classified is a config edit, not a code change.
+
+Sample data, for a demo or a fresh instance:
+
+```bash
+php artisan erp:sync-project-fields
+php artisan erp:seed-vessel-profitability          # 2 vessels, 2 charters each
+php artisan erp:seed-vessel-profitability --reset  # cancel the samples, then re-post
+```
+
+It posts **submitted** accounting documents, which reach the general ledger and can
+only be cancelled, never cleanly deleted — which is why it is a command you run on
+purpose. It also adds crew expense accounts when the chart of accounts has none.
 
 ## Import Principal Module
 
@@ -62,6 +96,21 @@ php artisan erpnext:sync Principal --code=PRN-0001   # one record
 
 Crew, vessels and documents are not queued at all: they are read from and written to
 ERP HPY directly, so there is nothing to catch up on.
+
+## Accounting
+
+General Ledger, Trial Balance, Balance Sheet and Profit & Loss are **ERP HPY's own
+query reports**, run through `frappe.desk.query_report.run` and rendered as they came
+back. Nothing is recalculated here: a ledger this app worked out for itself could
+disagree with the ERP desk, and when two systems disagree about money neither is
+trusted.
+
+`App\Services\Erpnext\FinancialReports` owns the awkward part of that bargain. A query
+report answers in whichever shape its author chose — columns as dicts or as
+`"Label:Currency:120"` strings, rows as dicts or as bare lists, total rows marked by
+wrapping the label in single quotes — and it normalises all of that into one shape
+before the view sees it. Adding a fifth report is an entry in `FinancialReports::REPORTS`
+plus, if it needs unusual filters, a branch in `filters()`.
 
 ## Files in ERP HPY
 

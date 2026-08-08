@@ -102,6 +102,33 @@ class ErpnextLoginTest extends TestCase
         $this->get(route('company.select'))->assertRedirect(url('/crew'));
     }
 
+    public function test_a_session_that_expired_on_the_chooser_still_lands_on_the_dashboard(): void
+    {
+        $this->fakeErpnext(['Keenindo Bintas Marine', 'Hasta Panca Yasa']);
+
+        // The chooser was on screen when the ERP HPY session ran out, so /company is
+        // what gets remembered as the page to come back to.
+        $this->get(route('company.select'))->assertRedirect(route('login'));
+
+        $this->post('/login', ['usr' => 'budi@hpy.co.id', 'pwd' => 'secret'])
+            ->assertRedirect(route('company.select'));
+
+        // Following that would only show the chooser again.
+        $this->post('/company', ['company' => 'Hasta Panca Yasa'])->assertRedirect(route('dashboard'));
+        $this->assertSame('Hasta Panca Yasa', session(ErpnextClient::COMPANY_KEY));
+    }
+
+    public function test_switching_company_from_a_page_stays_on_that_page(): void
+    {
+        $this->fakeErpnext(['Keenindo Bintas Marine', 'Hasta Panca Yasa']);
+
+        $this->withSession([
+            ErpnextClient::SESSION_KEY => ['sid' => 'abc123', 'user' => 'budi@hpy.co.id', 'full_name' => 'Budi'],
+            ErpnextClient::COMPANY_KEY => 'Keenindo Bintas Marine',
+        ])->post('/company', ['company' => 'Hasta Panca Yasa', 'redirect_to' => url('/crew')])
+            ->assertRedirect(url('/crew'));
+    }
+
     public function test_wrong_credentials_are_rejected(): void
     {
         Http::fake(['*/api/method/login' => Http::response(['message' => 'Invalid login'], 401)]);

@@ -48,15 +48,15 @@ tailwind.config = {
 <div class="flex min-h-screen">
 
   {{-- Sidebar --}}
-  <aside class="w-64 shrink-0 bg-gradient-to-b from-brand-d to-brand flex flex-col text-white">
-    <div class="px-5 py-4 border-b border-white/10">
-      <a href="{{ url('/') }}" class="block">
-        <div class="bg-white rounded-lg px-4 py-3 flex items-center justify-center">
-          <img src="{{ route('brand.image', 'hpy-logo.png') }}" alt="HPY" class="h-8 w-auto object-contain">
+  <aside class="w-64 shrink-0 bg-gradient-to-b from-brand-d to-brand flex flex-col text-white shadow-xl">
+    <div class="px-4 pt-5 pb-4">
+      <a href="{{ url('/') }}" class="flex items-center gap-3 rounded-xl bg-white/10 ring-1 ring-white/15 px-3 py-2.5 hover:bg-white/15 transition">
+        <div class="bg-white rounded-lg p-1.5 flex items-center justify-center shrink-0">
+          <img src="{{ route('brand.image', 'hpy-logo.png') }}" alt="HPY" class="h-7 w-auto object-contain">
         </div>
-        <div class="mt-2 text-center">
-          <div class="font-semibold text-white leading-tight">HPYMarine</div>
-          <div class="text-[11px] text-blue-100/80">Crew Management</div>
+        <div class="min-w-0 leading-tight">
+          <div class="font-semibold text-white truncate">HPYMarine</div>
+          <div class="text-[11px] text-blue-100/70">Crew Management</div>
         </div>
       </a>
     </div>
@@ -84,15 +84,17 @@ tailwind.config = {
         'Principal & Vessel' => [
           ['Principals', route('principals.index'), request()->is('principals*')],
           ['Vessels', route('vessels.index'), request()->is('vessels*')],
-          ['Vessel Profitability', '#', false],
+          ['Vessel Profitability', route('profitability.index'), request()->is('profitability*')],
         ],
         'Finance' => [
           ['Cash In', '#', false], ['Cash Out', '#', false],
           ['Invoices', '#', false], ['Payroll', '#', false], ['Crew Loans', '#', false],
         ],
         'Accounting' => [
-          ['General Ledger', '#', false], ['Trial Balance', '#', false],
-          ['Balance Sheet', '#', false], ['Profit & Loss', '#', false],
+          ['General Ledger', route('accounting', 'general-ledger'), request()->is('accounting/general-ledger')],
+          ['Trial Balance', route('accounting', 'trial-balance'), request()->is('accounting/trial-balance')],
+          ['Balance Sheet', route('accounting', 'balance-sheet'), request()->is('accounting/balance-sheet')],
+          ['Profit & Loss', route('accounting', 'profit-and-loss'), request()->is('accounting/profit-and-loss')],
         ],
         'Settings' => [
           ['Users', '#', false], ['Roles', '#', false],
@@ -101,39 +103,44 @@ tailwind.config = {
       ];
     @endphp
 
-    <nav class="flex-1 overflow-y-auto py-3 px-2 text-sm">
+    <nav class="flex-1 overflow-y-auto py-2 px-3 text-sm space-y-4">
       @foreach($nav as $group => $items)
-        <div class="mt-3 first:mt-0">
-          <div class="px-3 text-[10px] uppercase tracking-wider text-blue-200/70 font-semibold mb-1">{{ $group }}</div>
-          @foreach($items as $item)
-            @php
-              $active = $item[2] ?? false;
-              // '#' marks a module that has no page yet: shown, but plainly not a link.
-              $ready = ($item[1] ?? '#') !== '#';
-            @endphp
+        <div>
+          <div class="px-3 text-[10px] uppercase tracking-[0.12em] text-blue-200/60 font-semibold mb-1.5">{{ $group }}</div>
+          <div class="space-y-0.5">
+            @foreach($items as $item)
+              @php
+                $active = $item[2] ?? false;
+                // '#' marks a module that has no page yet: shown, but plainly not a link.
+                $ready = ($item[1] ?? '#') !== '#';
+              @endphp
 
-            @if($ready)
-              <a href="{{ $item[1] }}" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-[13px] {{ $active ? 'bg-white/15 text-white font-medium' : 'text-blue-100/90 hover:bg-white/10' }}">
-                <span class="w-1 h-1 rounded-full {{ $active ? 'bg-white' : 'bg-blue-200/60' }}"></span>
-                {{ $item[0] }}
-              </a>
-            @else
-              <span title="Belum dibuat" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-[13px] text-blue-100/40 cursor-not-allowed">
-                <span class="w-1 h-1 rounded-full bg-blue-200/25"></span>
-                {{ $item[0] }}
-                <span class="ml-auto text-[9px] uppercase tracking-wider text-blue-200/40 border border-blue-200/20 rounded px-1">soon</span>
-              </span>
-            @endif
-          @endforeach
+              @if($ready)
+                <a href="{{ $item[1] }}" class="group relative flex items-center gap-2.5 pl-3 pr-2.5 py-2 rounded-lg text-[13px] transition-colors {{ $active ? 'bg-white/15 text-white font-medium' : 'text-blue-100/80 hover:bg-white/10 hover:text-white' }}">
+                  @if($active)
+                    <span class="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-white"></span>
+                  @endif
+                  <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ $active ? 'bg-white' : 'bg-blue-200/40 group-hover:bg-blue-100/80' }}"></span>
+                  {{ $item[0] }}
+                </a>
+              @else
+                <span title="Belum dibuat" class="flex items-center gap-2.5 pl-3 pr-2.5 py-2 rounded-lg text-[13px] text-blue-100/35 cursor-not-allowed">
+                  <span class="w-1.5 h-1.5 rounded-full shrink-0 bg-blue-200/20"></span>
+                  {{ $item[0] }}
+                  <span class="ml-auto text-[9px] uppercase tracking-wider text-blue-200/40 border border-blue-200/20 rounded px-1 py-px">soon</span>
+                </span>
+              @endif
+            @endforeach
+          </div>
         </div>
       @endforeach
     </nav>
 
-    <div class="p-4 border-t border-white/10 flex items-center gap-3">
-      <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-semibold">{{ $erpInitial }}</div>
+    <div class="m-3 p-3 rounded-xl bg-white/10 ring-1 ring-white/10 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-xs font-semibold shrink-0">{{ $erpInitial }}</div>
       <div class="min-w-0">
         <div class="text-sm text-white truncate">{{ $erpName }}</div>
-        <div class="text-[11px] text-blue-100/70 truncate">{{ $erpMail }}</div>
+        <div class="text-[11px] text-blue-100/60 truncate">{{ $erpMail }}</div>
       </div>
     </div>
   </aside>

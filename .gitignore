@@ -26,3 +26,6 @@ Thumbs.db
 /database/*.sqlite-journal
 /storage/app/private
 /storage/app/public/candidates
+
+# Claude Code local settings
+/.claude

@@ -28,7 +28,7 @@ class CompanyController extends Controller
         if (count($companies) === 1) {
             $request->session()->put(ErpnextClient::COMPANY_KEY, $companies[0]);
 
-            return redirect()->intended(route('dashboard'));
+            return redirect()->to($this->intendedTarget($request));
         }
 
         return view('auth.company', [
@@ -53,7 +53,32 @@ class CompanyController extends Controller
         // Switching company changes what every page shows; go back where we came from.
         return $request->filled('redirect_to')
             ? redirect()->to($request->input('redirect_to'))
-            : redirect()->intended(route('dashboard'));
+            : redirect()->to($this->intendedTarget($request));
+    }
+
+    /**
+     * Where to land after a company is picked: the page the visitor was originally
+     * after, or the dashboard.
+     *
+     * A session that ran out while the chooser itself was on screen leaves /company
+     * as the remembered page — following that would only show the chooser again, so
+     * the auth pages are skipped over.
+     */
+    private function intendedTarget(Request $request): string
+    {
+        $intended = (string) $request->session()->pull('url.intended', '');
+        $path = rtrim((string) parse_url($intended, PHP_URL_PATH), '/');
+
+        $skip = [
+            rtrim(parse_url(route('company.select'), PHP_URL_PATH), '/'),
+            rtrim(parse_url(route('login'), PHP_URL_PATH), '/'),
+        ];
+
+        if ($intended === '' || in_array($path, $skip, true)) {
+            return route('dashboard');
+        }
+
+        return $intended;
     }
 
     /**
