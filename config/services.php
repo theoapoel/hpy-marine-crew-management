@@ -43,6 +43,12 @@ return [
         'url' => env('ERPNEXT_URL'),                    // e.g. https://kbm.hpy.co.id
         'username' => env('ERPNEXT_USERNAME'),          // ERP HPY login (email / user id)
         'password' => env('ERPNEXT_PASSWORD'),
+
+        // Preferred service credentials: an API key pair beats username/password
+        // because a token never expires and needs no cookie to survive.
+        'api_key' => env('ERPNEXT_API_KEY'),
+        'api_secret' => env('ERPNEXT_API_SECRET'),
+
         'timeout' => env('ERPNEXT_TIMEOUT', 15),
         'verify' => env('ERPNEXT_VERIFY_SSL', true),    // set false only on machines whose
                                                         // antivirus MITMs TLS (e.g. Avast)

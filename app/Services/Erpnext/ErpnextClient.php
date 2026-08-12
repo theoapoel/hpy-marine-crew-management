@@ -11,14 +11,17 @@ use Illuminate\Support\Facades\Session;
 /**
  * Thin wrapper around the ERP HPY REST API.
  *
- * Auth is session/login based (Frappe): POST /api/method/login with usr + pwd
- * returns a `sid` session cookie which is reused for subsequent requests.
- *
- * Two sources of sid, in order:
+ * Three ways to authenticate, tried in this order:
  *  1. the sid of the user logged in through our own login form (Laravel session),
  *     so ERP HPY applies that user's own permissions;
- *  2. an optional service account from ERPNEXT_USERNAME/PASSWORD, cached, used for
- *     requests made outside a user session (jobs, commands).
+ *  2. an API key pair (ERPNEXT_API_KEY/ERPNEXT_API_SECRET) sent as an Authorization
+ *     header — the sturdy choice for a server, since a token carries no session to
+ *     expire and no cookie to lose behind a proxy;
+ *  3. a service account from ERPNEXT_USERNAME/PASSWORD, which logs in for a `sid`
+ *     cookie and caches it.
+ *
+ * 2 and 3 only come into play outside a user session (jobs, commands, and any request
+ * whose session has no ERP HPY login of its own).
  *
  * Docs: https://frappeframework.com/docs/user/en/api/rest
  */
@@ -39,6 +42,8 @@ class ErpnextClient
         private readonly ?string $password,
         private readonly int $timeout = 15,
         private readonly bool $verify = true,
+        private readonly ?string $apiKey = null,
+        private readonly ?string $apiSecret = null,
     ) {
     }
 
@@ -50,6 +55,8 @@ class ErpnextClient
             password: config('services.erpnext.password'),
             timeout: (int) config('services.erpnext.timeout', 15),
             verify: (bool) config('services.erpnext.verify', true),
+            apiKey: config('services.erpnext.api_key'),
+            apiSecret: config('services.erpnext.api_secret'),
         );
     }
 
@@ -63,7 +70,17 @@ class ErpnextClient
     {
         return (bool) config('services.erpnext.enabled')
             && $this->hasUrl()
-            && ($this->hasUserSession() || (filled($this->username) && filled($this->password)));
+            && ($this->hasUserSession() || $this->hasApiToken() || $this->hasServiceAccount());
+    }
+
+    public function hasApiToken(): bool
+    {
+        return filled($this->apiKey) && filled($this->apiSecret);
+    }
+
+    public function hasServiceAccount(): bool
+    {
+        return filled($this->username) && filled($this->password);
     }
 
     public function hasUserSession(): bool
@@ -322,7 +339,7 @@ class ErpnextClient
     private function send(\Closure $callback): \Illuminate\Http\Client\Response
     {
         try {
-            return $callback($this->request($this->sid()))->throw();
+            return $callback($this->authorized())->throw();
         } catch (RequestException $e) {
             if ($e->response->status() !== 401) {
                 throw $e;
@@ -336,10 +353,30 @@ class ErpnextClient
                 throw new ErpnextSessionExpired('Your ERP HPY session has expired.', previous: $e);
             }
 
+            // A rejected token is a wrong or revoked key pair; retrying cannot fix it.
+            if ($this->hasApiToken()) {
+                throw $e;
+            }
+
             Cache::forget(self::SID_CACHE_KEY);
 
             return $callback($this->request($this->sid()))->throw();
         }
+    }
+
+    /**
+     * The request the API is actually called with: the logged-in user's session when
+     * there is one, otherwise the server's own credentials.
+     */
+    private function authorized(): PendingRequest
+    {
+        if (! $this->hasUserSession() && $this->hasApiToken()) {
+            return $this->base()->withHeaders([
+                'Authorization' => "token {$this->apiKey}:{$this->apiSecret}",
+            ]);
+        }
+
+        return $this->request($this->sid());
     }
 
     private function base(): PendingRequest
@@ -364,8 +401,10 @@ class ErpnextClient
             return $sid;
         }
 
-        if (blank($this->username) || blank($this->password)) {
-            throw new \RuntimeException('No ERP HPY session: log in, or set ERPNEXT_USERNAME/PASSWORD.');
+        if (! $this->hasServiceAccount()) {
+            throw new \RuntimeException(
+                'No ERP HPY session: log in, or set ERPNEXT_API_KEY/ERPNEXT_API_SECRET (or ERPNEXT_USERNAME/PASSWORD).'
+            );
         }
 
         return Cache::remember(self::SID_CACHE_KEY, self::SID_TTL, fn () => $this->login());
