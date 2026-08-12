@@ -41,8 +41,8 @@ class ErpnextApiTokenTest extends TestCase
         $this->assertTrue(ErpnextClient::fromConfig()->isConfigured());
     }
 
-    /** A user's own session still wins, so ERP HPY applies that user's permissions. */
-    public function test_a_logged_in_user_is_served_by_their_own_session(): void
+    /** With a key pair set, even a logged-in user's data calls travel under the token. */
+    public function test_the_token_is_used_even_inside_a_user_session(): void
     {
         Http::fake(['*/api/resource/Vessel*' => Http::response(['data' => []])]);
 
@@ -54,8 +54,26 @@ class ErpnextApiTokenTest extends TestCase
 
         ErpnextClient::fromConfig()->list('Vessel', ['name']);
 
-        Http::assertSent(fn ($request) => ! $request->hasHeader('Authorization')
-            && str_contains((string) $request->header('Cookie')[0] ?? '', 'sid=abc123'));
+        Http::assertSent(fn ($request) => $request->hasHeader('Authorization', 'token KEY123:SECRET456'));
+    }
+
+    /** Without a key pair, the user's own session still serves their requests. */
+    public function test_without_a_token_the_user_session_serves_the_request(): void
+    {
+        config()->set('services.erpnext.api_key', null);
+        config()->set('services.erpnext.api_secret', null);
+
+        Http::fake(['*/api/resource/Vessel*' => Http::response(['data' => []])]);
+
+        $this->withSession([
+            ErpnextClient::SESSION_KEY => [
+                'sid' => 'abc123', 'user' => 'budi@hpy.co.id', 'full_name' => 'Budi Santoso',
+            ],
+        ])->get('/');
+
+        ErpnextClient::fromConfig()->list('Vessel', ['name']);
+
+        Http::assertSent(fn ($request) => ! $request->hasHeader('Authorization'));
     }
 
     /** A wrong key pair cannot be repaired by retrying, unlike an expired session. */

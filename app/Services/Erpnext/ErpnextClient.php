@@ -12,16 +12,19 @@ use Illuminate\Support\Facades\Session;
  * Thin wrapper around the ERP HPY REST API.
  *
  * Three ways to authenticate, tried in this order:
- *  1. the sid of the user logged in through our own login form (Laravel session),
- *     so ERP HPY applies that user's own permissions;
- *  2. an API key pair (ERPNEXT_API_KEY/ERPNEXT_API_SECRET) sent as an Authorization
- *     header — the sturdy choice for a server, since a token carries no session to
- *     expire and no cookie to lose behind a proxy;
+ *  1. an API key pair (ERPNEXT_API_KEY/ERPNEXT_API_SECRET) sent as an Authorization
+ *     header. Set it and every call to ERP HPY goes out as that one service identity —
+ *     no session to expire, no cookie to lose behind a proxy, nothing to re-login;
+ *  2. the sid of the user logged in through our own login form (Laravel session);
  *  3. a service account from ERPNEXT_USERNAME/PASSWORD, which logs in for a `sid`
  *     cookie and caches it.
  *
- * 2 and 3 only come into play outside a user session (jobs, commands, and any request
- * whose session has no ERP HPY login of its own).
+ * Note what choosing 1 gives up: ERP HPY no longer sees who is asking, so its
+ * per-user permissions stop filtering anything and every user reads and writes with
+ * the key owner's rights. Who may do what is then decided entirely by this app's own
+ * Gates and by the company scoping each query carries. Users still log in against ERP
+ * HPY — that is where identity, roles and the company list come from; it is only the
+ * data calls that travel under the key.
  *
  * Docs: https://frappeframework.com/docs/user/en/api/rest
  */
@@ -345,17 +348,18 @@ class ErpnextClient
                 throw $e;
             }
 
+            // A rejected token is a wrong or revoked key pair; retrying cannot fix it,
+            // and there is no user session involved to send back to the login form.
+            if ($this->hasApiToken()) {
+                throw $e;
+            }
+
             // A user session cannot be renewed without their password: send them back
             // to the login form. A service account session can just be re-established.
             if ($this->hasUserSession()) {
                 Session::forget(self::SESSION_KEY);
 
                 throw new ErpnextSessionExpired('Your ERP HPY session has expired.', previous: $e);
-            }
-
-            // A rejected token is a wrong or revoked key pair; retrying cannot fix it.
-            if ($this->hasApiToken()) {
-                throw $e;
             }
 
             Cache::forget(self::SID_CACHE_KEY);
@@ -370,7 +374,7 @@ class ErpnextClient
      */
     private function authorized(): PendingRequest
     {
-        if (! $this->hasUserSession() && $this->hasApiToken()) {
+        if ($this->hasApiToken()) {
             return $this->base()->withHeaders([
                 'Authorization' => "token {$this->apiKey}:{$this->apiSecret}",
             ]);
