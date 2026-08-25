@@ -19,7 +19,7 @@ class CrewDocumentRepository
     }
 
     /**
-     * @param  array{type?: string, status?: string, search?: string, expiring_in?: int}  $filters
+     * @param  array{type?: string, status?: string, search?: string, expiring_in?: int}  $filters  expiring_in is in months
      * @return Collection<int, object>
      */
     public function all(array $filters = []): Collection
@@ -30,28 +30,53 @@ class CrewDocumentRepository
             return collect();
         }
 
-        $rowFilters = [['parent', 'in', $crew->keys()->all()]];
+        $typeFilter = [];
 
         if ($type = $filters['type'] ?? null) {
-            $rowFilters[] = ['certificate_type', '=', $type];
+            $typeFilter[] = ['certificate_type', '=', $type];
         }
 
-        $rows = $this->client->listChildren(
-            self::CHILD_DOCTYPE,
-            (string) config('services.erpnext.crew_doctype', 'Employee'),
-            ['name', 'parent', 'certificate_type', 'certificate_number', 'issued_by', 'issue_date', 'expiry_date', 'status', 'attachment', 'remarks'],
-            $rowFilters,
-        );
+        // A "parent in [...]" filter carrying crew ids travels in the GET query string,
+        // and with long employee ids even a 60-id chunk blows past ERP HPY's reverse
+        // proxy request-line limit (400 "Request Line is too Large"). So fetch the
+        // certificate rows without naming parents at all — paged, with only the type
+        // filter — and intersect with the company's crew here. The URL stays a constant,
+        // short length no matter how many crew there are.
+        $rows = collect();
+        $pageSize = 500;
 
-        return collect($rows)
+        for ($start = 0; ; $start += $pageSize) {
+            $page = $this->client->list(
+                self::CHILD_DOCTYPE,
+                ['name', 'parent', 'certificate_type', 'certificate_number', 'issued_by', 'issue_date', 'expiry_date', 'status', 'attachment', 'remarks'],
+                $typeFilter,
+                $pageSize,
+                $start,
+                ['parent' => (string) config('services.erpnext.crew_doctype', 'Employee')],
+            );
+
+            $rows = $rows->merge($page);
+
+            if (count($page) < $pageSize) {
+                break;
+            }
+        }
+
+        return $rows
+            ->filter(fn (array $row) => $crew->has($row['parent']))
             ->map(function (array $row) use ($crew) {
                 $row['crew_id'] = $row['parent'];
                 $row['crew_name'] = $crew[$row['parent']]['employee_name'] ?? $row['parent'];
                 $row['rank'] = $crew[$row['parent']]['custom_rank'] ?? null;
                 $row['vessel'] = $crew[$row['parent']]['custom_vessel'] ?? null;
                 $row['status'] = $this->status($row);
-                $row['days_left'] = $row['expiry_date']
-                    ? (int) now()->startOfDay()->diffInDays(Carbon::parse($row['expiry_date'])->startOfDay(), false)
+                $expiry = $row['expiry_date'] ? Carbon::parse($row['expiry_date'])->startOfDay() : null;
+                $row['days_left'] = $expiry
+                    ? (int) now()->startOfDay()->diffInDays($expiry, false)
+                    : null;
+                // Expiry is presented in whole months everywhere in the UI.
+                $row['months_left'] = $expiry
+                    ? (int) now()->startOfDay()->diffInMonths($expiry, false)
                     : null;
 
                 return (object) $row;
@@ -59,7 +84,7 @@ class CrewDocumentRepository
             ->when($filters['status'] ?? null, fn ($rows, $status) => $rows->where('status', $status))
             ->when(
                 $filters['expiring_in'] ?? null,
-                fn ($rows, $days) => $rows->filter(fn ($row) => $row->days_left !== null && $row->days_left <= $days),
+                fn ($rows, $months) => $rows->filter(fn ($row) => $row->months_left !== null && $row->months_left < $months),
             )
             ->when(
                 trim((string) ($filters['search'] ?? '')),
@@ -74,6 +99,10 @@ class CrewDocumentRepository
     /**
      * Crew of the session company, keyed by ERP HPY name.
      *
+     * A single page would silently drop whoever fell past the limit once the fleet grew
+     * past it — as it nearly did here — so this pages through the whole list instead of
+     * trusting one call to return everyone.
+     *
      * @return Collection<string, array<string, mixed>>
      */
     private function crewOfCompany(): Collection
@@ -84,12 +113,26 @@ class CrewDocumentRepository
             $filters[] = ['company', '=', $company];
         }
 
-        return collect($this->client->list(
-            (string) config('services.erpnext.crew_doctype', 'Employee'),
-            ['name', 'employee_name', 'custom_rank', 'custom_vessel'],
-            $filters,
-            500,
-        ))->keyBy('name');
+        $crew = collect();
+        $pageSize = 500;
+
+        for ($start = 0; ; $start += $pageSize) {
+            $page = $this->client->list(
+                (string) config('services.erpnext.crew_doctype', 'Employee'),
+                ['name', 'employee_name', 'custom_rank', 'custom_vessel'],
+                $filters,
+                $pageSize,
+                $start,
+            );
+
+            $crew = $crew->merge(collect($page)->keyBy('name'));
+
+            if (count($page) < $pageSize) {
+                break;
+            }
+        }
+
+        return $crew;
     }
 
     /** Recomputed on read so a stored "Valid" does not outlive the expiry date. */
