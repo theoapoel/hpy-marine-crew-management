@@ -53,7 +53,7 @@ trait ManagesErpDoctypes
             $this->info("  + {$name}");
         }
 
-        $this->line('  = ' . count(array_intersect(array_keys($rows), $existing)) . ' sudah ada');
+        $this->line('  = '.count(array_intersect(array_keys($rows), $existing)).' already there');
     }
 
     /**
@@ -69,7 +69,7 @@ trait ManagesErpDoctypes
         $position = collect($fields)->search(fn ($f) => $f['fieldname'] === $fieldname);
 
         if ($position === false) {
-            $this->warn("  ! {$parent}.{$fieldname} tidak ditemukan");
+            $this->warn("  ! {$parent}.{$fieldname} not found");
 
             return;
         }
@@ -91,7 +91,7 @@ trait ManagesErpDoctypes
             $fields[$position]['options'] = collect($client->list($target, ['name'], [], 500))->pluck('name')->implode("\n");
             $client->update('DocType', $parent, ['fields' => $fields]);
 
-            $this->warn("  ! ERP HPY menolak ubah ke Link; opsi Select {$parent}.{$fieldname} disamakan dengan {$target}");
+            $this->warn("  ! ERP HPY refused the change to Link; Select options of {$parent}.{$fieldname} synced with {$target}");
         }
     }
 }

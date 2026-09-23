@@ -144,7 +144,7 @@
           <tr class="text-[11px] uppercase text-muted tracking-wider bg-slate-50 border-y border-line">
             <th class="text-left px-6 py-3 font-medium">Type</th>
             <th class="text-left px-3 py-3 font-medium">Number</th>
-            <th class="text-left px-3 py-3 font-medium">Diterbitkan</th>
+            <th class="text-left px-3 py-3 font-medium">Issued</th>
             <th class="text-left px-3 py-3 font-medium">Issued</th>
             <th class="text-left px-3 py-3 font-medium">Expiry</th>
             <th class="text-left px-3 py-3 font-medium">Status</th>

@@ -130,7 +130,7 @@ class CrewController extends Controller
             report($e);
 
             throw ValidationException::withMessages([
-                'erpnext' => 'ERP HPY menolak data ini: '.$this->erpMessage($e),
+                'erpnext' => 'ERP HPY rejected this: '.$this->erpMessage($e),
             ]);
         }
     }

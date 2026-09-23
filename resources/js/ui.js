@@ -476,6 +476,142 @@ function tabs() {
     });
 }
 
+/*
+ * Grouped column charts ([data-column-chart]) for money: one group per period, one
+ * column per series, a shared zero line so losses hang below it. `diverging` colours
+ * a single series by sign (green gain / red loss, ▲/▼ in the tooltip). Hovering or
+ * arrowing onto a period highlights it and shows every series' value.
+ */
+export function idr(value) {
+    const abs = Math.abs(value);
+    const [div, unit] = abs >= 1e12 ? [1e12, 'T'] : abs >= 1e9 ? [1e9, 'B'] : abs >= 1e6 ? [1e6, 'M'] : abs >= 1e3 ? [1e3, 'K'] : [1, ''];
+    const n = abs / div;
+    const digits = div === 1 || n >= 100 ? 0 : n >= 10 ? 1 : 2;
+    return `${value < 0 ? '−' : ''}${n.toLocaleString('en-US', { maximumFractionDigits: digits })}${unit}`;
+}
+
+function moneyScale(min, max) {
+    const span = Math.max(max - Math.min(min, 0), 1);
+    const raw = span / 4;
+    const mag = 10 ** Math.floor(Math.log10(raw));
+    const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((v) => v >= raw);
+    const lo = min < 0 ? -Math.ceil(-min / step) * step : 0;
+    const hi = Math.max(Math.ceil(max / step) * step, lo + step);
+    return { lo, hi, step };
+}
+
+function columnCharts() {
+    document.querySelectorAll('[data-column-chart]').forEach((root) => {
+        const data = JSON.parse(root.dataset.columnChart || '{}');
+        const plot = root.querySelector('[data-column-plot]');
+        const labels = data.labels ?? [];
+        const series = data.series ?? [];
+        if (!plot || !labels.length || !series.length) return;
+
+        let active = -1;
+        let grown = reduced;
+        let geo = null;
+
+        const valueColor = (s, v) => (data.diverging ? (v < 0 ? TREND.down : TREND.up) : s.color);
+
+        const render = () => {
+            const W = plot.clientWidth;
+            const H = plot.clientHeight;
+            const pad = { l: 52, r: 8, t: 10, b: 28 };
+            const all = series.flatMap((s) => s.values);
+            const { lo, hi, step } = moneyScale(Math.min(...all, 0), Math.max(...all, 0));
+            const y = (v) => pad.t + ((hi - v) / (hi - lo)) * (H - pad.t - pad.b);
+            const band = (W - pad.l - pad.r) / labels.length;
+            const inner = Math.min(band * 0.72, series.length * 26);
+            const colW = Math.max(2, (inner - (series.length - 1) * 2) / series.length);
+            geo = { pad, band, W, H, y };
+
+            const svg = svgEl('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, class: 'block overflow-visible', 'aria-hidden': 'true' });
+
+            for (let v = lo; v <= hi + step / 2; v += step) {
+                const yy = Math.round(y(v)) + 0.5;
+                svg.appendChild(svgEl('line', { x1: pad.l, x2: W - pad.r, y1: yy, y2: yy, stroke: v === 0 ? '#94a3b8' : '#e2e8f0', 'stroke-width': 1 }));
+                const t = svgEl('text', { x: pad.l - 8, y: yy + 3.5, 'text-anchor': 'end', class: 'fill-slate-400', 'font-size': 10 });
+                t.textContent = idr(v);
+                svg.appendChild(t);
+            }
+
+            const every = Math.ceil(labels.length / Math.max(1, Math.floor((W - pad.l) / 56)));
+            labels.forEach((label, i) => {
+                const cx = pad.l + band * i + band / 2;
+                if (i === active) svg.appendChild(svgEl('rect', { x: pad.l + band * i + 1, y: pad.t, width: band - 2, height: H - pad.t - pad.b, rx: 4, fill: '#f1f5f9' }));
+                if (i % every === 0 || i === labels.length - 1) {
+                    const t = svgEl('text', { x: cx, y: H - 8, 'text-anchor': 'middle', class: i === active ? 'fill-slate-900' : 'fill-slate-500', 'font-size': 10.5 });
+                    t.textContent = label;
+                    svg.appendChild(t);
+                }
+
+                series.forEach((s, k) => {
+                    const v = s.values[i] ?? 0;
+                    if (!v) return;
+                    const x = cx - inner / 2 + k * (colW + 2);
+                    const top = y(Math.max(v, 0));
+                    const h = Math.max(1, Math.abs(y(v) - y(0)));
+                    const r = Math.min(4, colW / 2, h);
+                    // Round the data end only: the top of a gain, the bottom of a loss.
+                    const d = v >= 0
+                        ? `M${x},${top + h}V${top + r}q0,-${r} ${r},-${r}h${colW - 2 * r}q${r},0 ${r},${r}V${top + h}Z`
+                        : `M${x},${top}V${top + h - r}q0,${r} ${r},${r}h${colW - 2 * r}q${r},0 ${r},-${r}V${top}Z`;
+                    const path = svgEl('path', { d, fill: valueColor(s, v), opacity: active === -1 || active === i ? 1 : 0.35 });
+                    if (!grown) path.style.transformOrigin = `0 ${y(0)}px`, path.style.transform = 'scaleY(0)', path.dataset.grow = '';
+                    svg.appendChild(path);
+                });
+            });
+
+            plot.replaceChildren(svg);
+        };
+
+        const tip = (i) => {
+            const box = plot.getBoundingClientRect();
+            const x = box.left + geo.pad.l + geo.band * i + geo.band / 2;
+            const body = series.map((s) => {
+                const v = s.values[i] ?? 0;
+                const arrow = data.diverging ? (v < 0 ? '▼ ' : '▲ ') : '';
+                return `${series.length > 1 ? s.name + ': ' : arrow}Rp ${idr(v)}`;
+            });
+            if (data.notes?.[i]) body.push(data.notes[i]);
+            showTip(plot, x, box.top + geo.pad.t, box.bottom, data.full?.[i] ?? labels[i], body.join(' · '));
+        };
+
+        const focusAt = (i) => {
+            active = i;
+            render();
+            if (i >= 0) tip(i); else hideTip(plot);
+        };
+
+        plot.addEventListener('pointermove', (e) => {
+            const box = plot.getBoundingClientRect();
+            const i = Math.floor((e.clientX - box.left - geo.pad.l) / geo.band);
+            if (i >= 0 && i < labels.length && i !== active) focusAt(i);
+        });
+        plot.addEventListener('pointerleave', () => focusAt(-1));
+        plot.addEventListener('blur', () => focusAt(-1));
+        plot.addEventListener('keydown', (e) => {
+            if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+            e.preventDefault();
+            focusAt(Math.min(labels.length - 1, Math.max(0, (active < 0 ? labels.length : active) + (e.key === 'ArrowRight' ? 1 : -1))));
+        });
+
+        render();
+        new ResizeObserver(() => render()).observe(plot);
+
+        if (!grown) {
+            const stop = inView(root, () => {
+                // Later renders (hover, resize) draw full columns; these grow in place.
+                grown = true;
+                const cols = [...plot.querySelectorAll('[data-grow]')];
+                animate(cols, { transform: ['scaleY(0)', 'scaleY(1)'] }, { duration: 0.6, ease: EASE, delay: stagger(0.02) });
+                stop();
+            }, { amount: 0.3 });
+        }
+    });
+}
+
 export function boot() {
     icons();
     tabs();
@@ -491,5 +627,6 @@ export function boot() {
     bars();
     tooltips();
     areaCharts();
+    columnCharts();
     gestures();
 }

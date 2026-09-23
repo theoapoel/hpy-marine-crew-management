@@ -278,8 +278,8 @@ export function contracts() {
             if (overwrite || !end.value) end.value = value;
             if (hint) {
                 hint.textContent = end.value === value
-                    ? `Otomatis: ${format(from)} + ${n} bulan`
-                    : `Diisi manual (otomatis: ${format(value)})`;
+                    ? `Auto: ${format(from)} + ${n} months`
+                    : `Entered by hand (auto: ${format(value)})`;
             }
         };
 

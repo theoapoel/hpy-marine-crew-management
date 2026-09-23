@@ -100,7 +100,7 @@
                   <span class="truncate">{{ $label }}</span>
                 </a>
               @else
-                <span title="Belum dibuat" class="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] text-slate-500 cursor-not-allowed">
+                <span title="Not built yet" class="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] text-slate-500 cursor-not-allowed">
                   <i data-lucide="{{ $icon }}" class="size-4 shrink-0 text-slate-600"></i>
                   <span class="truncate">{{ $label }}</span>
                   <span class="ml-auto text-[9px] uppercase tracking-wider text-slate-500 border border-slate-700 rounded px-1 py-px">soon</span>

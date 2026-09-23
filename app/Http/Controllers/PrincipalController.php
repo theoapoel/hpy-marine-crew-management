@@ -18,9 +18,7 @@ use Illuminate\Support\Facades\Gate;
  */
 class PrincipalController extends Controller
 {
-    public function __construct(private readonly ErpnextOptions $options)
-    {
-    }
+    public function __construct(private readonly ErpnextOptions $options) {}
 
     public function index(Request $request)
     {
@@ -117,7 +115,7 @@ class PrincipalController extends Controller
         // A principal with ships still on our books would orphan those vessels.
         if (($fleet = count($principal->erpVessels())) > 0) {
             return back()->withErrors([
-                'principal' => "{$principal->principal_name} masih punya {$fleet} kapal. Pindahkan atau lepas kapalnya dulu.",
+                'principal' => "{$principal->principal_name} still has {$fleet} vessels. Move or unlink them first.",
             ]);
         }
 
@@ -135,7 +133,7 @@ class PrincipalController extends Controller
             return back()->with('success', "{$principal->principal_code} synced to ERP HPY ({$principal->erpnext_name}).");
         }
 
-        return back()->withErrors(['erpnext' => 'ERP HPY rejected this: ' . $principal->erpnext_sync_error]);
+        return back()->withErrors(['erpnext' => 'ERP HPY rejected this: '.$principal->erpnext_sync_error]);
     }
 
     private function formOptions(): array

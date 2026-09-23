@@ -13,9 +13,7 @@ use Illuminate\Validation\ValidationException;
  */
 class CompanyController extends Controller
 {
-    public function __construct(private readonly ErpnextClient $erpnext)
-    {
-    }
+    public function __construct(private readonly ErpnextClient $erpnext) {}
 
     /** Session key holding the company list, so the navbar need not re-fetch it. */
     public const LIST_KEY = 'erpnext_companies';
@@ -44,7 +42,7 @@ class CompanyController extends Controller
 
         if (! in_array($company, $this->companies($request), true)) {
             throw ValidationException::withMessages([
-                'company' => 'Company tidak dikenal di ERP HPY.',
+                'company' => 'Unknown company in ERP HPY.',
             ]);
         }
 

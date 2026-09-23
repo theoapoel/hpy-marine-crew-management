@@ -152,7 +152,7 @@ class CrewAssignmentFormTest extends TestCase
         $this->get('/sign-on')
             ->assertOk()
             ->assertSee('Waiting Crew')
-            ->assertSee('Baru Sign On')
+            ->assertSee('Recently Signed On')
             ->assertSee('Irfandi Saputra');
     }
 

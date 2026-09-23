@@ -48,8 +48,8 @@ class ErpnextLoginTest extends TestCase
         $response = $this->post('/login', ['usr' => 'budi@hpy.co.id', 'pwd' => 'secret']);
 
         $response->assertRedirect(route('company.select'));
-        $this->assertSame('abc123', session(ErpnextClient::SESSION_KEY . '.sid'));
-        $this->assertSame('Budi Santoso', session(ErpnextClient::SESSION_KEY . '.full_name'));
+        $this->assertSame('abc123', session(ErpnextClient::SESSION_KEY.'.sid'));
+        $this->assertSame('Budi Santoso', session(ErpnextClient::SESSION_KEY.'.full_name'));
 
         // Only one company, so it is picked automatically.
         $this->get(route('company.select'))->assertRedirect(route('dashboard'));
@@ -67,7 +67,7 @@ class ErpnextLoginTest extends TestCase
 
         $this->get(route('company.select'))
             ->assertOk()
-            ->assertSee('Pilih Company')
+            ->assertSee('Select Company')
             ->assertSee('Hasta Panca Yasa');
 
         $this->assertNull(session(ErpnextClient::COMPANY_KEY));
@@ -137,7 +137,7 @@ class ErpnextLoginTest extends TestCase
             ->assertRedirect()
             ->assertSessionHasErrors('usr');
 
-        $this->assertNull(session(ErpnextClient::SESSION_KEY . '.sid'));
+        $this->assertNull(session(ErpnextClient::SESSION_KEY.'.sid'));
     }
 
     public function test_logout_clears_the_session(): void
@@ -148,6 +148,6 @@ class ErpnextLoginTest extends TestCase
             'sid' => 'abc123', 'user' => 'budi@hpy.co.id', 'full_name' => 'Budi Santoso',
         ]])->post('/logout')->assertRedirect(route('login'));
 
-        $this->assertNull(session(ErpnextClient::SESSION_KEY . '.sid'));
+        $this->assertNull(session(ErpnextClient::SESSION_KEY.'.sid'));
     }
 }

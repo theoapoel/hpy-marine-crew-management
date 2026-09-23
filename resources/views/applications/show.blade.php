@@ -16,7 +16,7 @@
       <h1 class="text-2xl font-semibold text-slate-900 mt-2">{{ $application->candidate?->full_name ?? '—' }}</h1>
       <p class="text-sm text-muted mt-1">
         <span class="font-mono">{{ $application->application_code }}</span> ·
-        {{ $application->applied_rank ?: 'Rank belum ditentukan' }}
+        {{ $application->applied_rank ?: 'Rank not set' }}
         {{ $application->vessel ? ' · ' . $application->vessel : '' }}
       </p>
     </div>
@@ -25,7 +25,7 @@
         <a href="{{ route('applications.edit', $application) }}" class="bg-white hover:bg-slate-50 border border-line text-slate-700 text-sm rounded-md px-4 py-2">Edit</a>
       @endcan
       @if($application->candidate)
-        <a href="{{ route('candidates.show', $application->candidate) }}" class="bg-white hover:bg-slate-50 border border-line text-slate-700 text-sm rounded-md px-4 py-2">Lihat Kandidat</a>
+        <a href="{{ route('candidates.show', $application->candidate) }}" class="bg-white hover:bg-slate-50 border border-line text-slate-700 text-sm rounded-md px-4 py-2">View Candidate</a>
       @endif
     </div>
   </div>
@@ -63,13 +63,13 @@
             @csrf
             @if($application->next_stage === 'interview')
               <div>
-                <label class="block text-xs text-muted mb-1">Nilai Interview</label>
+                <label class="block text-xs text-muted mb-1">Interview Score</label>
                 <input type="number" name="interview_score" min="1" max="10" class="w-24 bg-white border border-line rounded-md py-1.5 px-2 text-sm">
               </div>
             @endif
             @if($application->next_stage === 'mcu')
               <div>
-                <label class="block text-xs text-muted mb-1">Hasil MCU</label>
+                <label class="block text-xs text-muted mb-1">MCU Result</label>
                 <select name="mcu_result" class="bg-white border border-line rounded-md py-1.5 px-2 text-sm">
                   @foreach(\App\Models\CrewApplication::MCU_RESULTS as $result)
                     <option value="{{ $result }}">{{ $text($result) }}</option>
@@ -79,7 +79,7 @@
             @endif
             @if($application->next_stage === 'offer')
               <div>
-                <label class="block text-xs text-muted mb-1">Gaji Ditawarkan</label>
+                <label class="block text-xs text-muted mb-1">Offered Salary</label>
                 <input type="number" step="0.01" name="offered_salary" class="w-40 bg-white border border-line rounded-md py-1.5 px-2 text-sm">
               </div>
             @endif
@@ -91,19 +91,19 @@
           <form method="POST" action="{{ route('applications.close', $application) }}" class="flex items-end gap-2">
             @csrf
             <div>
-              <label class="block text-xs text-muted mb-1">Tutup lamaran</label>
+              <label class="block text-xs text-muted mb-1">Close application</label>
               <select name="stage" class="bg-white border border-line rounded-md py-1.5 px-2 text-sm">
                 @foreach(\App\Models\CrewApplication::CLOSED_STAGES as $stage)
                   <option value="{{ $stage }}">{{ $text($stage) }}</option>
                 @endforeach
               </select>
             </div>
-            <input type="text" name="rejection_reason" placeholder="Alasan" class="bg-white border border-line rounded-md py-1.5 px-2 text-sm w-48">
-            <button class="border border-line bg-white hover:bg-slate-50 text-slate-700 text-sm rounded-md px-4 py-2">Tutup</button>
+            <input type="text" name="rejection_reason" placeholder="Reason" class="bg-white border border-line rounded-md py-1.5 px-2 text-sm w-48">
+            <button class="border border-line bg-white hover:bg-slate-50 text-slate-700 text-sm rounded-md px-4 py-2">Close</button>
           </form>
         </div>
         @if($application->next_stage === 'hired')
-          <p class="text-[11px] text-muted mt-2">Menandai "hired" akan membuat Employee di ERP HPY dan membuka Crew Assignment.</p>
+          <p class="text-[11px] text-muted mt-2">Marking it "hired" creates the Employee in ERP HPY and opens a Crew Assignment.</p>
         @endif
       @endcan
     @endif
@@ -111,7 +111,7 @@
 
   @if($application->assignment)
     <div class="bg-green-50 border border-green-200 text-green-800 text-sm rounded-lg px-4 py-3">
-      Sudah dibuatkan penugasan
+      Assignment already created
       <a href="{{ route('assignments.show', $application->assignment) }}" class="underline font-medium">{{ $application->assignment->assignment_code }}</a>
       ({{ $text($application->assignment->status) }}).
     </div>
@@ -119,20 +119,20 @@
 
   @php
     $rows = [
-      'Kandidat' => $application->candidate?->candidate_code,
+      'Candidate' => $application->candidate?->candidate_code,
       'Applied Rank' => $application->applied_rank,
-      'Kapal' => $application->vessel,
+      'Vessel' => $application->vessel,
       'Principal' => $application->principal,
-      'Tanggal Lamaran' => $fmt($application->applied_date),
-      'Lama di Pipeline' => $application->days_in_pipeline . ' hari',
+      'Application Date' => $fmt($application->applied_date),
+      'Time in Pipeline' => $application->days_in_pipeline . ' days',
       'Screening' => $fmt($application->screening_date),
       'Interview' => $fmt($application->interview_date),
-      'Nilai Interview' => $application->interview_score,
+      'Interview Score' => $application->interview_score,
       'MCU' => $fmt($application->mcu_date),
-      'Hasil MCU' => $text($application->mcu_result),
+      'MCU Result' => $text($application->mcu_result),
       'Offer' => $fmt($application->offer_date),
-      'Gaji Ditawarkan' => $application->offered_salary ? $application->offered_salary_currency . ' ' . number_format((float) $application->offered_salary, 2) : null,
-      'Keputusan' => $fmt($application->decision_date),
+      'Offered Salary' => $application->offered_salary ? $application->offered_salary_currency . ' ' . number_format((float) $application->offered_salary, 2) : null,
+      'Decision' => $fmt($application->decision_date),
     ];
   @endphp
 
@@ -152,13 +152,13 @@
     <div class="bg-panel border border-line rounded-xl p-6 shadow-sm space-y-3">
       @if($application->interview_notes)
         <div>
-          <div class="text-[11px] uppercase tracking-wider text-muted">Catatan Interview</div>
+          <div class="text-[11px] uppercase tracking-wider text-muted">Interview Notes</div>
           <p class="text-sm text-slate-700 whitespace-pre-line mt-1">{{ $application->interview_notes }}</p>
         </div>
       @endif
       @if($application->notes)
         <div>
-          <div class="text-[11px] uppercase tracking-wider text-muted">Catatan</div>
+          <div class="text-[11px] uppercase tracking-wider text-muted">Notes</div>
           <p class="text-sm text-slate-700 whitespace-pre-line mt-1">{{ $application->notes }}</p>
         </div>
       @endif

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Penugasan · HPYMarine')
+@section('title', 'Edit Assignment · HPYMarine')
 @section('heading', 'Crew Assignment')
 
 @section('content')
@@ -11,6 +11,6 @@
 
   <form action="{{ route('assignments.update', $assignment) }}" method="POST" class="space-y-5">
     @csrf @method('PUT')
-    @include('assignments.form', ['submitLabel' => 'Perbarui Penugasan'])
+    @include('assignments.form', ['submitLabel' => 'Update Assignment'])
   </form>
 @endsection

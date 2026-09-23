@@ -9,8 +9,8 @@
   <div class="login-brand-content">
     <div>
       <div class="login-brand-kicker">Crew Management</div>
-      <h2 class="login-brand-title">Satu portal untuk<br>crew, kapal, dan dokumen pelaut.</h2>
-      <p class="login-brand-sub">Crew Master · Sign On/Off · Candidate Pool · Sertifikat · Principal &amp; Vessel — terintegrasi dengan ERP HPY, real-time.</p>
+      <h2 class="login-brand-title">One portal for<br>crew, vessels and seafarer documents.</h2>
+      <p class="login-brand-sub">Crew Master · Sign On/Off · Candidate Pool · Certificates · Principal &amp; Vessel — integrated with ERP HPY, in real time.</p>
     </div>
 
     <div class="login-brand-kpis">
@@ -26,8 +26,8 @@
       </div>
       <div class="login-brand-kpi">
         <div class="login-brand-kpi-label">Compliance</div>
-        <div class="login-brand-kpi-value">Dokumen</div>
-        <div class="login-brand-kpi-delta">Sertifikat · Expiry</div>
+        <div class="login-brand-kpi-value">Documents</div>
+        <div class="login-brand-kpi-delta">Certificates · Expiry</div>
       </div>
     </div>
   </div>

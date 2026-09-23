@@ -38,8 +38,8 @@
         <h1 class="text-2xl font-semibold text-slate-900 mt-2">{{ $candidate->full_name }}</h1>
         <p class="text-sm text-muted mt-1">
           <span class="font-mono">{{ $candidate->candidate_code }}</span> ·
-          {{ $candidate->applied_rank ?: 'Rank belum ditentukan' }} ·
-          {{ $candidate->age ? $candidate->age . ' tahun' : '—' }}
+          {{ $candidate->applied_rank ?: 'Rank not set' }} ·
+          {{ $candidate->age ? $candidate->age . ' years' : '—' }}
         </p>
         <div class="mt-2 flex items-center gap-2">
           <span class="chip border {{ $statusColors[$candidate->status] ?? '' }}">{{ $text($candidate->status) }}</span>
@@ -55,7 +55,7 @@
         <a href="{{ route('candidates.edit', $candidate) }}" class="bg-white hover:bg-slate-50 border border-line text-slate-700 text-sm rounded-md px-4 py-2">Edit</a>
         @if(! $candidate->linked_employee_id)
           <form method="POST" action="{{ route('candidates.promote', $candidate) }}"
-                onsubmit="return confirm('Buat Employee di ERP HPY dari kandidat ini?')">
+                onsubmit="return confirm('Create an Employee in ERP HPY from this candidate?')">
             @csrf
             <button class="bg-brand hover:bg-brand-d text-white text-sm font-medium rounded-md px-4 py-2 shadow-sm">Promote to Employee</button>
           </form>
@@ -66,9 +66,9 @@
 
   @if($candidate->linked_employee_id)
     <div class="bg-green-50 border border-green-200 text-green-800 text-sm rounded-lg px-4 py-3">
-      Sudah menjadi Employee
+      Already an Employee
       <a href="{{ route('crew.show', $candidate->linked_employee_id) }}" class="underline font-medium">{{ $candidate->linked_employee_id }}</a>
-      di ERP HPY.
+      in ERP HPY.
     </div>
   @endif
 
@@ -83,30 +83,30 @@
     $groups = [
       'Personal Info' => [
         'Gender' => $text($candidate->gender),
-        'Tanggal Lahir' => $fmt($candidate->date_of_birth),
-        'Tempat Lahir' => $candidate->place_of_birth,
-        'Kewarganegaraan' => $candidate->nationality,
-        'Status Pernikahan' => $text($candidate->marital_status),
-        'Agama' => $candidate->religion,
-        'Golongan Darah' => $candidate->blood_type,
+        'Date of Birth' => $fmt($candidate->date_of_birth),
+        'Place of Birth' => $candidate->place_of_birth,
+        'Nationality' => $candidate->nationality,
+        'Marital Status' => $text($candidate->marital_status),
+        'Religion' => $candidate->religion,
+        'Blood Type' => $candidate->blood_type,
         'NIK' => $candidate->nik,
         'Passport No.' => $candidate->passport_no,
         'Passport Expiry' => $fmt($candidate->passport_expiry),
         'Passport Issue Place' => $candidate->passport_issue_place,
-        'Telepon' => $candidate->phone,
+        'Phone' => $candidate->phone,
         'WhatsApp' => $candidate->whatsapp,
         'Email' => $candidate->email,
-        'Alamat' => $candidate->full_address,
-        'Kontak Darurat' => $candidate->emergency_contact_name,
-        'Hubungan' => $candidate->emergency_contact_relation,
-        'Telepon Darurat' => $candidate->emergency_contact_phone,
+        'Address' => $candidate->full_address,
+        'Emergency Contact' => $candidate->emergency_contact_name,
+        'Relationship' => $candidate->emergency_contact_relation,
+        'Emergency Phone' => $candidate->emergency_contact_phone,
       ],
       'Professional' => [
         'Applied Rank' => $candidate->applied_rank,
         'Preferred Vessel Type' => $candidate->preferred_vessel_type,
-        'Pengalaman' => $candidate->years_of_experience . ' tahun',
-        'Kapal Terakhir' => $candidate->last_vessel_name,
-        'Rank Terakhir' => $candidate->last_rank,
+        'Experience' => $candidate->years_of_experience . ' tahun',
+        'Last Vessel' => $candidate->last_vessel_name,
+        'Last Rank' => $candidate->last_rank,
         'Last Sign Off' => $fmt($candidate->last_sign_off_date),
       ],
       'Certification' => [
@@ -122,10 +122,10 @@
       'Source & Status' => [
         'Source' => $text($candidate->source),
         'Source Detail' => $candidate->source_detail,
-        'Direferensikan oleh' => $candidate->referred_by_employee_id,
+        'Referred by' => $candidate->referred_by_employee_id,
         'Agency' => $candidate->source_agency_id,
-        'Sekolah' => $candidate->source_school,
-        'Biaya Rekrutmen' => $candidate->source_cost ? number_format((float) $candidate->source_cost, 2) : null,
+        'School' => $candidate->source_school,
+        'Recruitment Cost' => $candidate->source_cost ? number_format((float) $candidate->source_cost, 2) : null,
         'Availability Date' => $fmt($candidate->availability_date),
         'Expected Salary' => $candidate->expected_salary ? $candidate->expected_salary_currency . ' ' . number_format((float) $candidate->expected_salary, 2) : null,
       ],
@@ -167,7 +167,7 @@
         <div class="text-slate-600">{{ !empty($cop['expiry']) ? \Illuminate\Support\Carbon::parse($cop['expiry'])->format('d M Y') : '—' }}</div>
       </div>
     @empty
-      <p class="text-sm text-muted">Belum ada COP.</p>
+      <p class="text-sm text-muted">No COP yet.</p>
     @endforelse
   </div>
 
@@ -175,7 +175,7 @@
   <div data-tab-panel="attachments" class="bg-panel border border-line rounded-xl p-6 shadow-sm">
     <h2 class="text-sm font-semibold text-slate-900 mb-4">Attachments</h2>
     <div class="flex flex-wrap gap-4 text-sm">
-      @foreach(['cv_path' => 'CV', 'id_scan_path' => 'Scan KTP', 'seaman_book_scan_path' => 'Scan Seaman Book', 'coc_scan_path' => 'Scan COC'] as $field => $heading)
+      @foreach(['cv_path' => 'CV', 'id_scan_path' => 'ID Card Scan (KTP)', 'seaman_book_scan_path' => 'Scan Seaman Book', 'coc_scan_path' => 'Scan COC'] as $field => $heading)
         @if($candidate->{$field})
           <a href="{{ Storage::url($candidate->{$field}) }}" target="_blank" rel="noopener"
              class="text-brand hover:text-brand-d font-medium">{{ $heading }}</a>
@@ -188,8 +188,8 @@
   </div>
 
   <div data-tab-panel="notes" class="bg-panel border border-line rounded-xl p-6 shadow-sm">
-    <h2 class="text-sm font-semibold text-slate-900 mb-2">Catatan</h2>
-    <p class="text-sm text-slate-700 whitespace-pre-line">{{ $candidate->notes ?: 'Belum ada catatan.' }}</p>
+    <h2 class="text-sm font-semibold text-slate-900 mb-2">Notes</h2>
+    <p class="text-sm text-slate-700 whitespace-pre-line">{{ $candidate->notes ?: 'No notes yet.' }}</p>
   </div>
   </div>
 

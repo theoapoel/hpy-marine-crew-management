@@ -70,6 +70,56 @@
     </div>
   @endif
 
+  @if(!empty($kpis))
+    @php $money = fn ($v) => \App\Services\Erpnext\AccountingCharts::money((float) $v); @endphp
+    <section aria-label="Summary" class="grid grid-cols-2 xl:grid-cols-4 gap-4" data-enter>
+      @foreach($kpis as $kpi)
+        @php
+          $number = $kpi['value'] ?? $kpi['percent'] ?? $kpi['count'] ?? null;
+          $tone = !empty($kpi['signed']) && $number !== null ? ($number < 0 ? 'text-[#d93025]' : 'text-[#1e8e3e]') : 'text-slate-900';
+        @endphp
+        <div class="bg-panel border border-line rounded-xl p-4 shadow-sm min-w-0">
+          <div class="flex items-center gap-1.5 text-xs text-muted">
+            @isset($kpi['color'])<span class="size-2 rounded-[3px]" style="background: {{ $kpi['color'] }}"></span>@endisset
+            <span class="truncate">{{ $kpi['label'] }}</span>
+          </div>
+          <div class="mt-1.5 text-xl lg:text-2xl font-semibold tabular-nums truncate {{ $tone }}"
+               @isset($kpi['value']) title="Rp {{ number_format($kpi['value'], 2) }}" @endisset>
+            @if(array_key_exists('percent', $kpi))
+              {{ $kpi['percent'] === null ? '—' : (!empty($kpi['signed']) ? ($kpi['percent'] < 0 ? '▼ ' : '▲ ') : '') . number_format(abs($kpi['percent']), 1) . '%' }}
+            @elseif(array_key_exists('count', $kpi))
+              {{ number_format($kpi['count']) }}
+            @else
+              {{ (!empty($kpi['signed']) ? ($kpi['value'] < 0 ? '▼ ' : '▲ ') : '') . $money($kpi['value']) }}
+            @endif
+          </div>
+          @isset($kpi['note'])
+            <div class="mt-1 text-xs font-medium {{ !empty($kpi['ok']) ? 'text-[#1e8e3e]' : 'text-[#d93025]' }}">{{ !empty($kpi['ok']) ? '✓' : '!' }} {{ $kpi['note'] }}</div>
+          @endisset
+        </div>
+      @endforeach
+    </section>
+  @endif
+
+  @if(!empty($charts))
+    <section aria-label="Charts" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      @foreach($charts as $chart)
+        <div class="bg-panel border border-line rounded-xl p-5 shadow-sm min-w-0 {{ !empty($chart['wide']) ? 'lg:col-span-2' : '' }}">
+          <h2 class="text-sm font-semibold text-slate-900 mb-3">{{ $chart['title'] }}</h2>
+          @if($chart['type'] === 'columns')
+            <x-chart.grouped :labels="$chart['labels']" :series="$chart['series']" :diverging="$chart['diverging'] ?? false"
+                             :notes="$chart['notes'] ?? []" :label="$chart['title']" />
+          @else
+            <x-chart.bars :rows="$chart['rows']" unit="" :label="$chart['title']" stacked />
+          @endif
+          @isset($chart['note'])
+            <p class="mt-3 text-[11px] text-muted">{{ $chart['note'] }}</p>
+          @endisset
+        </div>
+      @endforeach
+    </section>
+  @endif
+
   <div class="bg-panel border border-line rounded-xl overflow-hidden shadow-sm">
     <div class="px-5 py-3 border-b border-line flex items-baseline justify-between">
       <h2 class="text-sm font-semibold text-slate-900">

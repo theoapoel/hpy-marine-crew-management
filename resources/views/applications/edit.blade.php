@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Lamaran · HPYMarine')
+@section('title', 'Edit Application · HPYMarine')
 @section('heading', 'Recruitment Pipeline')
 
 @section('content')
@@ -11,6 +11,6 @@
 
   <form action="{{ route('applications.update', $application) }}" method="POST" class="space-y-5">
     @csrf @method('PUT')
-    @include('applications.form', ['submitLabel' => 'Perbarui Lamaran'])
+    @include('applications.form', ['submitLabel' => 'Update Application'])
   </form>
 @endsection

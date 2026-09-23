@@ -8,8 +8,8 @@
     <div>
       <h1 class="text-2xl font-semibold text-slate-900">Sign Off</h1>
       <p class="text-sm text-muted mt-1">
-        {{ $assignments->count() }} crew di atas kapal
-        @if(($filters['days'] ?? 0) > 0) · kontrak habis dalam {{ $filters['days'] }} hari @endif
+        {{ $assignments->count() }} crew on board
+        @if(($filters['days'] ?? 0) > 0) · contract ends within {{ $filters['days'] }} days @endif
       </p>
     </div>
   </div>
@@ -19,16 +19,16 @@
   @endif
 
   <form method="GET" class="flex flex-wrap gap-2">
-    <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Cari nama crew..."
+    <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Search crew name..."
            class="bg-white border border-line rounded-md py-2 px-3 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand">
     <select name="vessel" class="bg-white border border-line rounded-md py-2 px-3 text-sm">
-      <option value="">Semua kapal</option>
+      <option value="">All vessels</option>
       @foreach($vessels as $vessel)<option value="{{ $vessel }}" @selected(($filters['vessel'] ?? '') === $vessel)>{{ $vessel }}</option>@endforeach
     </select>
     <select name="days" class="bg-white border border-line rounded-md py-2 px-3 text-sm">
-      <option value="0">Semua yang onboard</option>
+      <option value="0">Everyone on board</option>
       @foreach([14, 30, 60, 90] as $days)
-        <option value="{{ $days }}" @selected((int) ($filters['days'] ?? 0) === $days)>Kontrak habis ≤ {{ $days }} hari</option>
+        <option value="{{ $days }}" @selected((int) ($filters['days'] ?? 0) === $days)>Contract ends ≤ {{ $days }} days</option>
       @endforeach
     </select>
     <button class="bg-white hover:bg-slate-50 border border-line text-slate-700 text-sm rounded-md px-4 py-2">Filter</button>
@@ -44,13 +44,13 @@
               {{ $assignment->assignment_code }} · {{ $assignment->rank ?: '—' }} · {{ $assignment->vessel ?: '—' }}
             </div>
             <div class="text-[11px] text-muted">
-              Sign on {{ $assignment->sign_on_date?->format('d M Y') ?? '—' }} · {{ $assignment->days_onboard }} hari di atas kapal
+              Sign on {{ $assignment->sign_on_date?->format('d M Y') ?? '—' }} · {{ $assignment->days_onboard }} days on board
               @if($assignment->planned_sign_off_date)
                 · kontrak s/d {{ $assignment->planned_sign_off_date->format('d M Y') }}
               @endif
             </div>
             @if($assignment->is_overdue)
-              <span class="chip border bg-rose-50 text-rose-700 border-rose-200 mt-1 inline-block">lewat kontrak</span>
+              <span class="chip border bg-rose-50 text-rose-700 border-rose-200 mt-1 inline-block">past contract</span>
             @endif
           </div>
 
@@ -58,17 +58,17 @@
             <form method="POST" action="{{ route('assignments.do-sign-off', $assignment) }}" class="flex flex-wrap items-end gap-2 ml-auto">
               @csrf
               <div>
-                <label class="block text-xs text-muted mb-1">Tanggal Sign Off</label>
+                <label class="block text-xs text-muted mb-1">Sign Off Date</label>
                 <input type="date" name="sign_off_date" value="{{ now()->format('Y-m-d') }}"
                        class="bg-white border border-line rounded-md py-1.5 px-2 text-sm">
               </div>
               <div>
-                <label class="block text-xs text-muted mb-1">Pelabuhan</label>
+                <label class="block text-xs text-muted mb-1">Port</label>
                 <input type="text" name="sign_off_port" class="w-36 bg-white border border-line rounded-md py-1.5 px-2 text-sm">
               </div>
               <div>
-                <label class="block text-xs text-muted mb-1">Alasan</label>
-                <input type="text" name="sign_off_reason" placeholder="Kontrak selesai" class="w-44 bg-white border border-line rounded-md py-1.5 px-2 text-sm">
+                <label class="block text-xs text-muted mb-1">Reason</label>
+                <input type="text" name="sign_off_reason" placeholder="Contract completed" class="w-44 bg-white border border-line rounded-md py-1.5 px-2 text-sm">
               </div>
               <button class="bg-brand hover:bg-brand-d text-white text-sm font-medium rounded-md px-4 py-2">Sign Off</button>
             </form>
@@ -77,10 +77,10 @@
       </div>
     @empty
       <div class="bg-panel border border-line rounded-xl p-10 text-center text-muted text-sm shadow-sm">
-        Tidak ada crew yang sedang di atas kapal.
+        No crew on board right now.
       </div>
     @endforelse
   </div>
 
-  <p class="text-[11px] text-muted">Sign off mengosongkan kapal pada Employee di ERP HPY dan mengembalikan status crew ke Standby.</p>
+  <p class="text-[11px] text-muted">Sign off clears the vessel on the Employee in ERP HPY and sets the crew status back to Standby.</p>
 @endsection

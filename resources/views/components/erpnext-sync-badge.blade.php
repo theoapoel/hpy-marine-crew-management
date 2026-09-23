@@ -10,7 +10,7 @@
   $title = match ($status) {
     'synced' => 'ERP HPY: ' . ($model->erpnext_name ?? '') . ' · ' . ($model->erpnext_synced_at?->diffForHumans() ?? ''),
     'failed' => 'ERP HPY: ' . ($model->erpnext_sync_error ?? 'sync failed'),
-    default => 'Belum dikirim ke ERP HPY',
+    default => 'Not sent to ERP HPY yet',
   };
 @endphp
 

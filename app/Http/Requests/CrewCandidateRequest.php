@@ -33,7 +33,7 @@ class CrewCandidateRequest extends FormRequest
             'first_name' => ['nullable', 'string', 'max:100'],
             'last_name' => ['nullable', 'string', 'max:100'],
             'gender' => ['nullable', Rule::in(CrewCandidate::GENDERS)],
-            'date_of_birth' => ['required', 'date', 'before:today', 'before_or_equal:' . now()->subYears(18)->toDateString()],
+            'date_of_birth' => ['required', 'date', 'before:today', 'before_or_equal:'.now()->subYears(18)->toDateString()],
             'place_of_birth' => ['nullable', 'string', 'max:100'],
             'nationality' => ['nullable', 'string', 'max:100'],
             'marital_status' => ['nullable', Rule::in(CrewCandidate::MARITAL_STATUSES)],
@@ -115,13 +115,13 @@ class CrewCandidateRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'phone.regex' => 'Nomor telepon harus format Indonesia, mis. 081234567890.',
-            'whatsapp.regex' => 'Nomor WhatsApp harus format Indonesia, mis. 081234567890.',
-            'nik.digits' => 'NIK harus 16 digit.',
-            'date_of_birth.before_or_equal' => 'Umur kandidat minimal 18 tahun.',
-            'referred_by_employee_id.required' => 'Isi siapa yang mereferensikan kandidat ini.',
-            'source_agency_id.required' => 'Pilih agency asal kandidat.',
-            'source_school.required' => 'Isi nama sekolah/akademi asal kandidat.',
+            'phone.regex' => 'Phone number must be an Indonesian number, e.g. 081234567890.',
+            'whatsapp.regex' => 'WhatsApp number must be an Indonesian number, e.g. 081234567890.',
+            'nik.digits' => 'NIK must be 16 digits.',
+            'date_of_birth.before_or_equal' => 'The candidate must be at least 18 years old.',
+            'referred_by_employee_id.required' => 'Enter who referred this candidate.',
+            'source_agency_id.required' => 'Select the agency the candidate came from.',
+            'source_school.required' => 'Enter the candidate\'s school/academy.',
         ];
     }
 

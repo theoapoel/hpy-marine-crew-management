@@ -19,20 +19,20 @@
     <div>
       <h1 class="text-2xl font-semibold text-slate-900">{{ $title }}</h1>
       <p class="text-sm text-muted mt-1">
-        {{ $documents->count() }} dokumen
-        @if($view === 'expiring') · kadaluarsa dalam {{ $filters['expiring_in'] ?? 60 }} hari @endif
+        {{ $documents->count() }} documents
+        @if($view === 'expiring') · expiring within {{ $filters['expiring_in'] ?? 60 }} days @endif
       </p>
     </div>
   </div>
 
   {{-- Filters --}}
   <form method="GET" class="flex flex-wrap gap-2">
-    <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Cari nama crew atau nomor..."
+    <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Search crew name or number..."
            class="bg-white border border-line rounded-md py-2 px-3 text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand w-72">
 
     @if($view === 'certificates')
       <select name="type" class="bg-white border border-line rounded-md py-2 px-3 text-sm">
-        <option value="">Semua jenis</option>
+        <option value="">All types</option>
         @foreach($types as $type)
           <option value="{{ $type }}" @selected(($filters['type'] ?? '') === $type)>{{ $type }}</option>
         @endforeach
@@ -40,7 +40,7 @@
     @endif
 
     <select name="status" class="bg-white border border-line rounded-md py-2 px-3 text-sm">
-      <option value="">Semua status</option>
+      <option value="">All statuses</option>
       @foreach($statuses as $status)
         <option value="{{ $status }}" @selected(($filters['status'] ?? '') === $status)>{{ $status }}</option>
       @endforeach
@@ -63,11 +63,11 @@
         <thead>
           <tr class="text-[11px] uppercase text-muted tracking-wider bg-slate-50 border-b border-line">
             <th class="text-left px-5 py-3 font-medium">Crew</th>
-            <th class="text-left px-3 py-3 font-medium">Jenis</th>
-            <th class="text-left px-3 py-3 font-medium">Nomor</th>
-            <th class="text-left px-3 py-3 font-medium">Terbit</th>
-            <th class="text-left px-3 py-3 font-medium">Kadaluarsa</th>
-            <th class="text-left px-3 py-3 font-medium">Sisa</th>
+            <th class="text-left px-3 py-3 font-medium">Type</th>
+            <th class="text-left px-3 py-3 font-medium">Number</th>
+            <th class="text-left px-3 py-3 font-medium">Issued</th>
+            <th class="text-left px-3 py-3 font-medium">Expiry</th>
+            <th class="text-left px-3 py-3 font-medium">Days Left</th>
             <th class="text-left px-3 py-3 font-medium">Status</th>
             <th class="text-right px-5 py-3 font-medium">File</th>
           </tr>
@@ -84,7 +84,7 @@
               <td class="px-3 py-3 text-slate-600">{{ $fmt($doc->issue_date) }}</td>
               <td class="px-3 py-3 text-slate-600">{{ $fmt($doc->expiry_date) }}</td>
               <td class="px-3 py-3 text-slate-600">
-                {{ $doc->days_left === null ? '—' : $doc->days_left . ' hari' }}
+                {{ $doc->days_left === null ? '—' : $doc->days_left . ' days' }}
               </td>
               <td class="px-3 py-3"><span class="chip border {{ $colors[$doc->status] ?? '' }}">{{ $doc->status }}</span></td>
               <td class="px-5 py-3 text-right">
@@ -100,7 +100,7 @@
               </td>
             </tr>
           @empty
-            <tr><td colspan="8" class="px-5 py-10 text-center text-muted">Tidak ada dokumen.</td></tr>
+            <tr><td colspan="8" class="px-5 py-10 text-center text-muted">No documents.</td></tr>
           @endforelse
         </tbody>
       </table>

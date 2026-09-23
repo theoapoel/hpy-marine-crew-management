@@ -1,7 +1,7 @@
 <!doctype html>
-<html lang="id">
+<html lang="en">
 <head>
-<title>Masuk — HPYMarine</title>
+<title>Sign in — HPYMarine</title>
 @include('layouts.partials.head')
 </head>
 <body class="min-h-screen flex font-sans text-slate-900 bg-white">
@@ -17,9 +17,9 @@
       <div class="w-full max-w-sm" data-enter>
         <img src="{{ route('brand.image', 'hpy-logo.png') }}" alt="HPY Marine" class="h-16 w-auto max-w-full object-contain mb-6">
 
-        <h1 class="text-xl font-medium text-slate-900">Masuk</h1>
+        <h1 class="text-xl font-medium text-slate-900">Sign in</h1>
         <p class="mt-1 mb-6 text-sm text-muted">
-          Gunakan akun ERP HPY Anda
+          Use your ERP HPY account
           @if($erpUrl)
             <span class="text-slate-700">({{ parse_url($erpUrl, PHP_URL_HOST) }})</span>
           @endif
@@ -33,9 +33,9 @@
           @endif
 
           <div class="space-y-1">
-            <label for="usr" class="block text-xs text-muted">Email atau Username</label>
+            <label for="usr" class="block text-xs text-muted">Email or Username</label>
             <input id="usr" name="usr" type="text" required autofocus autocomplete="username"
-                   value="{{ old('usr') }}" placeholder="nama@perusahaan.co.id"
+                   value="{{ old('usr') }}" placeholder="name@company.co.id"
                    class="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm placeholder:text-slate-400 transition-colors focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand">
           </div>
 
@@ -44,7 +44,7 @@
             <div class="relative">
               <input id="pwd" name="pwd" type="password" required autocomplete="current-password" placeholder="••••••••"
                      class="w-full rounded-lg border border-slate-300 bg-slate-50 pl-3 pr-10 py-2 text-sm placeholder:text-slate-400 transition-colors focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand">
-              <button type="button" tabindex="-1" data-password-toggle aria-label="Tampilkan password" aria-pressed="false"
+              <button type="button" tabindex="-1" data-password-toggle aria-label="Show password" aria-pressed="false"
                       class="absolute right-0.5 top-1/2 -translate-y-1/2 size-8 rounded-lg flex items-center justify-center text-muted hover:text-slate-900 hover:bg-slate-100">
                 <svg data-eye class="size-[15px]" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
@@ -65,15 +65,15 @@
             <svg data-enter-icon class="size-[15px]" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/>
             </svg>
-            <span data-label>Masuk</span>
+            <span data-label>Sign in</span>
           </button>
 
           <p class="text-center text-xs text-muted">
-            Lupa password?
+            Forgot your password?
             @if($erpUrl)
-              Reset di <a href="{{ rtrim($erpUrl, '/') }}/login#forgot" target="_blank" rel="noopener" class="text-brand hover:underline">ERP HPY</a>.
+              Reset it in <a href="{{ rtrim($erpUrl, '/') }}/login#forgot" target="_blank" rel="noopener" class="text-brand hover:underline">ERP HPY</a>.
             @else
-              Hubungi administrator ERP HPY perusahaan Anda.
+              Contact your company's ERP HPY administrator.
             @endif
           </p>
         </form>
@@ -98,7 +98,7 @@
         var show = pwd.type === 'password';
         pwd.type = show ? 'text' : 'password';
         toggle.setAttribute('aria-pressed', show);
-        toggle.setAttribute('aria-label', show ? 'Sembunyikan password' : 'Tampilkan password');
+        toggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
         toggle.querySelector('[data-eye]').classList.toggle('hidden', show);
         toggle.querySelector('[data-eye-off]').classList.toggle('hidden', !show);
       });
@@ -108,7 +108,7 @@
         button.disabled = true;
         button.querySelector('[data-spin]').classList.remove('hidden');
         button.querySelector('[data-enter-icon]').classList.add('hidden');
-        button.querySelector('[data-label]').textContent = 'Memproses…';
+        button.querySelector('[data-label]').textContent = 'Signing in…';
         form.querySelectorAll('input:not([type=hidden])').forEach(function (i) { i.readOnly = true; });
       });
     })();

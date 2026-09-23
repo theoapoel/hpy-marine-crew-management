@@ -1,7 +1,7 @@
 <!doctype html>
-<html lang="id">
+<html lang="en">
 <head>
-<title>Pilih Company — HPYMarine</title>
+<title>Select Company — HPYMarine</title>
 @include('layouts.partials.head')
 </head>
 <body class="min-h-screen font-sans bg-navy flex items-center justify-center p-6 relative overflow-hidden">
@@ -56,14 +56,14 @@
           </button>
         @empty
           <p class="text-[13px] text-red-700">
-            Akun Anda tidak punya akses ke company mana pun di ERP HPY.
+            Your account has no access to any company in ERP HPY.
           </p>
         @endforelse
       </form>
 
       <form method="POST" action="{{ route('logout') }}" class="mt-5 text-center">
         @csrf
-        <button class="text-[11px] text-muted hover:text-red-600">Keluar</button>
+        <button class="text-[11px] text-muted hover:text-red-600">Sign out</button>
       </form>
     </div>
   </div>

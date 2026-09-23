@@ -6,7 +6,7 @@
 @section('content')
   <div class="flex items-start justify-between">
     <div>
-      <h1 class="text-2xl font-semibold text-slate-900">{{ $user ? 'Halo, ' . $user : 'Dashboard' }}</h1>
+      <h1 class="text-2xl font-semibold text-slate-900">{{ $user ? 'Hello, ' . $user : 'Dashboard' }}</h1>
       <p class="text-sm text-muted mt-1">{{ $today }}</p>
     </div>
     <div class="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-full px-3 py-1">

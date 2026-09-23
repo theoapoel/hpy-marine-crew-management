@@ -21,15 +21,15 @@
   <div class="flex items-start justify-between">
     <div>
       <h1 class="text-2xl font-semibold text-slate-900">Recruitment Pipeline</h1>
-      <p class="text-sm text-muted mt-1">{{ $applications->count() }} lamaran</p>
+      <p class="text-sm text-muted mt-1">{{ $applications->count() }} applications</p>
     </div>
     <div class="flex items-center gap-2">
       <a href="{{ request()->fullUrlWithQuery(['view' => $view === 'board' ? 'list' : 'board']) }}"
          class="bg-white hover:bg-slate-50 border border-line text-slate-700 text-sm rounded-md px-4 py-2">
-        {{ $view === 'board' ? 'Tampilan List' : 'Tampilan Board' }}
+        {{ $view === 'board' ? 'List View' : 'Board View' }}
       </a>
       @can('applications.create')
-        <a href="{{ route('applications.create') }}" class="bg-brand hover:bg-brand-d text-white text-sm font-medium rounded-md px-4 py-2 shadow-sm">+ Lamaran Baru</a>
+        <a href="{{ route('applications.create') }}" class="bg-brand hover:bg-brand-d text-white text-sm font-medium rounded-md px-4 py-2 shadow-sm">+ New Application</a>
       @endcan
     </div>
   </div>
@@ -40,20 +40,20 @@
 
   <form method="GET" class="flex flex-wrap gap-2">
     <input type="hidden" name="view" value="{{ $view }}">
-    <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Cari kandidat atau kode..."
+    <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Search candidate or code..."
            class="bg-white border border-line rounded-md py-2 px-3 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand">
     <select name="stage" class="bg-white border border-line rounded-md py-2 px-3 text-sm">
-      <option value="">Semua tahap</option>
+      <option value="">All stages</option>
       @foreach(array_merge($stages, $closedStages) as $stage)
         <option value="{{ $stage }}" @selected(($filters['stage'] ?? '') === $stage)>{{ $text($stage) }}</option>
       @endforeach
     </select>
     <select name="applied_rank" class="bg-white border border-line rounded-md py-2 px-3 text-sm">
-      <option value="">Semua rank</option>
+      <option value="">All ranks</option>
       @foreach($ranks as $rank)<option value="{{ $rank }}" @selected(($filters['applied_rank'] ?? '') === $rank)>{{ $rank }}</option>@endforeach
     </select>
     <select name="vessel" class="bg-white border border-line rounded-md py-2 px-3 text-sm">
-      <option value="">Semua kapal</option>
+      <option value="">All vessels</option>
       @foreach($vessels as $vessel)<option value="{{ $vessel }}" @selected(($filters['vessel'] ?? '') === $vessel)>{{ $vessel }}</option>@endforeach
     </select>
     <button class="bg-white hover:bg-slate-50 border border-line text-slate-700 text-sm rounded-md px-4 py-2">Filter</button>
@@ -78,7 +78,7 @@
                   </a>
                   <div class="text-[11px] text-muted mt-0.5">{{ $application->applied_rank ?: '—' }}{{ $application->vessel ? ' · ' . $application->vessel : '' }}</div>
                   <div class="text-[11px] text-muted mt-1 font-mono">{{ $application->application_code }}</div>
-                  <div class="text-[11px] text-muted">{{ $application->days_in_pipeline }} hari di pipeline</div>
+                  <div class="text-[11px] text-muted">{{ $application->days_in_pipeline }} days in pipeline</div>
 
                   @can('applications.update')
                     @if($application->next_stage)
@@ -92,7 +92,7 @@
                   @endcan
                 </div>
               @empty
-                <div class="text-[11px] text-muted border border-dashed border-line rounded-lg p-3 text-center">kosong</div>
+                <div class="text-[11px] text-muted border border-dashed border-line rounded-lg p-3 text-center">empty</div>
               @endforelse
             </div>
           </div>
@@ -100,7 +100,7 @@
 
         {{-- Closed applications, parked at the end --}}
         <div class="w-64 shrink-0">
-          <div class="text-[11px] uppercase tracking-wider text-muted font-semibold mb-2">Ditutup</div>
+          <div class="text-[11px] uppercase tracking-wider text-muted font-semibold mb-2">Closed</div>
           <div class="space-y-2">
             @foreach($closedStages as $stage)
               @foreach($byStage[$stage] ?? [] as $application)
@@ -125,13 +125,13 @@
         <table class="w-full text-sm">
           <thead>
             <tr class="text-[11px] uppercase text-muted tracking-wider bg-slate-50 border-b border-line">
-              <th class="text-left px-5 py-3 font-medium">Kode</th>
-              <th class="text-left px-3 py-3 font-medium">Kandidat</th>
+              <th class="text-left px-5 py-3 font-medium">Code</th>
+              <th class="text-left px-3 py-3 font-medium">Candidate</th>
               <th class="text-left px-3 py-3 font-medium">Rank</th>
-              <th class="text-left px-3 py-3 font-medium">Kapal</th>
-              <th class="text-left px-3 py-3 font-medium">Tahap</th>
+              <th class="text-left px-3 py-3 font-medium">Vessel</th>
+              <th class="text-left px-3 py-3 font-medium">Stage</th>
               <th class="text-left px-3 py-3 font-medium">Applied</th>
-              <th class="text-right px-5 py-3 font-medium">Aksi</th>
+              <th class="text-right px-5 py-3 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -148,11 +148,11 @@
                 <td class="px-3 py-3"><span class="chip border {{ $stageColors[$application->stage] ?? '' }}">{{ $text($application->stage) }}</span></td>
                 <td class="px-3 py-3 text-slate-600">{{ $application->applied_date?->format('d M Y') }}</td>
                 <td class="px-5 py-3 text-right">
-                  <a href="{{ route('applications.show', $application) }}" class="text-brand hover:text-brand-d font-medium">Buka</a>
+                  <a href="{{ route('applications.show', $application) }}" class="text-brand hover:text-brand-d font-medium">Open</a>
                 </td>
               </tr>
             @empty
-              <tr><td colspan="7" class="px-5 py-10 text-center text-muted">Belum ada lamaran.</td></tr>
+              <tr><td colspan="7" class="px-5 py-10 text-center text-muted">No applications yet.</td></tr>
             @endforelse
           </tbody>
         </table>

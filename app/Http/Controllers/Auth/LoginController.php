@@ -16,13 +16,11 @@ use Illuminate\Validation\ValidationException;
  */
 class LoginController extends Controller
 {
-    public function __construct(private readonly ErpnextClient $erpnext)
-    {
-    }
+    public function __construct(private readonly ErpnextClient $erpnext) {}
 
     public function show(Request $request)
     {
-        if ($request->session()->has(ErpnextClient::SESSION_KEY . '.sid')) {
+        if ($request->session()->has(ErpnextClient::SESSION_KEY.'.sid')) {
             return redirect()->route('company.select');
         }
 
@@ -40,7 +38,7 @@ class LoginController extends Controller
 
         if (! $this->erpnext->hasUrl()) {
             throw ValidationException::withMessages([
-                'usr' => 'ERPNEXT_URL belum diisi di .env.',
+                'usr' => 'ERPNEXT_URL is not set in .env.',
             ]);
         }
 
@@ -52,7 +50,7 @@ class LoginController extends Controller
             report($e);
 
             throw ValidationException::withMessages([
-                'usr' => 'Tidak bisa menghubungi ERP HPY: ' . $e->getMessage(),
+                'usr' => 'Cannot reach ERP HPY: '.$e->getMessage(),
             ]);
         }
 
@@ -60,7 +58,7 @@ class LoginController extends Controller
             RateLimiter::hit($this->throttleKey($request));
 
             throw ValidationException::withMessages([
-                'usr' => 'Username atau password ERP HPY salah.',
+                'usr' => 'Wrong ERP HPY username or password.',
             ]);
         }
 
@@ -79,7 +77,7 @@ class LoginController extends Controller
 
     public function destroy(Request $request): RedirectResponse
     {
-        if ($sid = $request->session()->get(ErpnextClient::SESSION_KEY . '.sid')) {
+        if ($sid = $request->session()->get(ErpnextClient::SESSION_KEY.'.sid')) {
             $this->erpnext->logout($sid);
         }
 
@@ -96,13 +94,13 @@ class LoginController extends Controller
         }
 
         throw ValidationException::withMessages([
-            'usr' => 'Terlalu banyak percobaan login. Coba lagi dalam '
-                . RateLimiter::availableIn($this->throttleKey($request)) . ' detik.',
+            'usr' => 'Too many sign-in attempts. Try again in '
+                .RateLimiter::availableIn($this->throttleKey($request)).' seconds.',
         ]);
     }
 
     private function throttleKey(Request $request): string
     {
-        return 'erpnext-login|' . mb_strtolower((string) $request->input('usr')) . '|' . $request->ip();
+        return 'erpnext-login|'.mb_strtolower((string) $request->input('usr')).'|'.$request->ip();
     }
 }

@@ -140,4 +140,38 @@ class AccountingReportTest extends TestCase
 
         $this->get('/accounting/cash-flow')->assertNotFound();
     }
+
+    public function test_profit_and_loss_gets_headline_figures_and_monthly_charts(): void
+    {
+        $this->fakeReport([
+            'columns' => [
+                ['fieldname' => 'account', 'label' => 'Account', 'fieldtype' => 'Link'],
+                ['fieldname' => 'jan_2026', 'label' => 'Jan 2026', 'fieldtype' => 'Currency'],
+                ['fieldname' => 'feb_2026', 'label' => 'Feb 2026', 'fieldtype' => 'Currency'],
+                ['fieldname' => 'total', 'label' => 'Total', 'fieldtype' => 'Currency'],
+            ],
+            'result' => [
+                ['account' => '4000.000 - Penjualan - KBM', 'account_name' => '4000.000 - Penjualan', 'indent' => 0, 'is_group' => 1, 'jan_2026' => 200000000, 'feb_2026' => 100000000, 'total' => 300000000],
+                ['account' => "'Total Income (Credit)'", 'jan_2026' => 200000000, 'feb_2026' => 100000000, 'total' => 300000000],
+                ['account' => '5000.000 - Beban - KBM', 'account_name' => '5000.000 - Beban', 'indent' => 0, 'is_group' => 1, 'jan_2026' => 50000000, 'feb_2026' => 150000000, 'total' => 200000000],
+                ['account' => '5120.000 - Biaya Gaji - KBM', 'account_name' => '5120.000 - Biaya Gaji', 'indent' => 1, 'parent_account' => '5000.000 - Beban - KBM', 'jan_2026' => 50000000, 'feb_2026' => 150000000, 'total' => 200000000],
+                ['account' => "'Total Expense (Debit)'", 'jan_2026' => 50000000, 'feb_2026' => 150000000, 'total' => 200000000],
+                ['account' => "'Profit for the year'", 'jan_2026' => 150000000, 'feb_2026' => -50000000, 'total' => 100000000],
+            ],
+        ]);
+
+        $this->get('/accounting/profit-and-loss')
+            ->assertOk()
+            ->assertSee('Rp 300M')            // income
+            ->assertSee('Net profit')
+            ->assertSee('33.3%')              // net margin
+            ->assertSee('data-column-chart', false)
+            ->assertSee('Income vs expenses by period')
+            ->assertSee('Top expenses')
+            ->assertSee('5120.000 Biaya Gaji');
+
+        // Profit and loss is asked per period, not accumulated.
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'query_report.run') && ($r['filters'] ?? '') !== ''
+            && json_decode($r['filters'], true)['accumulated_values'] === 0);
+    }
 }

@@ -88,13 +88,13 @@ class PrincipalRequest extends FormRequest
                     ->filter(fn ($row) => filled($row['name'] ?? null));
 
                 if ($rows->isEmpty()) {
-                    $validator->errors()->add('contact_persons', 'Isi minimal satu contact person.');
+                    $validator->errors()->add('contact_persons', 'Add at least one contact person.');
 
                     return;
                 }
 
                 if ($rows->where('is_primary', '1')->isEmpty() && $rows->where('is_primary', true)->isEmpty()) {
-                    $validator->errors()->add('contact_persons', 'Tandai satu contact person sebagai primary.');
+                    $validator->errors()->add('contact_persons', 'Mark one contact person as primary.');
                 }
             },
         ];
@@ -104,7 +104,7 @@ class PrincipalRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'contract_end_date.after' => 'Kontrak berakhir harus setelah tanggal mulai.',
+            'contract_end_date.after' => 'The contract end date must be after the start date.',
         ];
     }
 }

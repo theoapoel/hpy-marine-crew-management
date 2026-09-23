@@ -8,7 +8,7 @@ use App\Models\CrewCandidate;
 use App\Services\Erpnext\ErpnextClient;
 use App\Services\Erpnext\ErpnextOptions;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
@@ -24,8 +24,7 @@ class CrewAssignmentController extends Controller
     public function __construct(
         private readonly ErpnextOptions $options,
         private readonly ErpnextClient $erpnext,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request)
     {
@@ -98,7 +97,7 @@ class CrewAssignmentController extends Controller
         $assignment = CrewAssignment::create($this->prepared($this->validated($request)));
 
         return redirect()->route('assignments.show', $assignment)
-            ->with('success', "{$assignment->assignment_code} dibuat.");
+            ->with('success', "{$assignment->assignment_code} created.");
     }
 
     public function show(CrewAssignment $assignment)
@@ -122,7 +121,7 @@ class CrewAssignmentController extends Controller
         $assignment->update($this->prepared($this->validated($request), $assignment));
 
         return redirect()->route('assignments.show', $assignment)
-            ->with('success', "{$assignment->assignment_code} diperbarui.");
+            ->with('success', "{$assignment->assignment_code} updated.");
     }
 
     public function destroy(CrewAssignment $assignment)
@@ -131,7 +130,7 @@ class CrewAssignmentController extends Controller
 
         $assignment->delete();
 
-        return redirect()->route('assignments.index')->with('success', "{$assignment->assignment_code} dihapus.");
+        return redirect()->route('assignments.index')->with('success', "{$assignment->assignment_code} deleted.");
     }
 
     public function signOn(Request $request, CrewAssignment $assignment)
@@ -147,7 +146,7 @@ class CrewAssignmentController extends Controller
             'planned_sign_off_date' => ['nullable', 'date', 'after:sign_on_date'],
         ]));
 
-        return back()->with('success', "{$assignment->crew_name} sign on ke {$assignment->vessel}.");
+        return back()->with('success', "{$assignment->crew_name} signed on to {$assignment->vessel}.");
     }
 
     /**
@@ -163,13 +162,13 @@ class CrewAssignmentController extends Controller
         $assignment->fill(array_filter($found, fn ($v) => filled($v)))->save();
 
         if (blank($assignment->employee_id)) {
-            return back()->withErrors(['link' => "Tidak ada satu Employee di ERP HPY yang namanya persis \"{$assignment->crew_name}\". Pilih Employee-nya di form edit."]);
+            return back()->withErrors(['link' => "No single Employee in ERP HPY is named exactly \"{$assignment->crew_name}\". Pick the Employee in the edit form."]);
         }
 
         // Saving only syncs when a watched field changed; a repair must sync regardless.
         $assignment->syncToErp();
 
-        return back()->with('success', "{$assignment->assignment_code} ditautkan ke {$assignment->employee_id}.");
+        return back()->with('success', "{$assignment->assignment_code} linked to {$assignment->employee_id}.");
     }
 
     public function signOff(Request $request, CrewAssignment $assignment)
@@ -184,7 +183,7 @@ class CrewAssignmentController extends Controller
             'sign_off_reason' => ['nullable', 'string', 'max:150'],
         ]));
 
-        return back()->with('success', "{$assignment->crew_name} sign off dari {$assignment->vessel}.");
+        return back()->with('success', "{$assignment->crew_name} signed off from {$assignment->vessel}.");
     }
 
     private function query(array $filters)
@@ -340,7 +339,7 @@ class CrewAssignmentController extends Controller
     }
 
     /** The single item of a collection, or null when there are none or several. */
-    private function onlyOne(\Illuminate\Support\Collection $items): mixed
+    private function onlyOne(Collection $items): mixed
     {
         return $items->count() === 1 ? $items->first() : null;
     }

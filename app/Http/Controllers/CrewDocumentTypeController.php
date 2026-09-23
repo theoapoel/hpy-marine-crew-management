@@ -35,7 +35,7 @@ class CrewDocumentTypeController extends Controller
         ]);
 
         if (! $this->types->editable()) {
-            return back()->withErrors(['certificate_name' => 'Master belum ada di ERP HPY. Jalankan php artisan erp:sync-crew-fields dulu.']);
+            return back()->withErrors(['certificate_name' => 'The master does not exist in ERP HPY yet. Run php artisan erp:sync-crew-fields first.']);
         }
 
         $name = trim($data['certificate_name']);
@@ -45,10 +45,10 @@ class CrewDocumentTypeController extends Controller
         } catch (RequestException $e) {
             report($e);
 
-            return back()->withInput()->withErrors(['certificate_name' => 'ERP HPY menolak (status '.$e->response->status().').']);
+            return back()->withInput()->withErrors(['certificate_name' => 'ERP HPY rejected it (status '.$e->response->status().').']);
         }
 
-        return back()->with('success', "Document type \"{$name}\" ditambahkan.");
+        return back()->with('success', "Document type \"{$name}\" added.");
     }
 
     public function update(Request $request, string $type)
@@ -68,9 +68,9 @@ class CrewDocumentTypeController extends Controller
         } catch (RequestException $e) {
             report($e);
 
-            return back()->withErrors(['certificate_name' => "ERP HPY menolak perubahan {$type} (status {$e->response->status()})."]);
+            return back()->withErrors(['certificate_name' => "ERP HPY rejected the change to {$type} (status {$e->response->status()})."]);
         }
 
-        return back()->with('success', "{$type} diperbarui.");
+        return back()->with('success', "{$type} updated.");
     }
 }

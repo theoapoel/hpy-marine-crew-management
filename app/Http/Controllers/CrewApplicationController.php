@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CrewApplication;
 use App\Models\CrewCandidate;
 use App\Services\Erpnext\ErpnextOptions;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -15,9 +16,7 @@ use Illuminate\Validation\Rule;
  */
 class CrewApplicationController extends Controller
 {
-    public function __construct(private readonly ErpnextOptions $options)
-    {
-    }
+    public function __construct(private readonly ErpnextOptions $options) {}
 
     public function index(Request $request)
     {
@@ -67,7 +66,7 @@ class CrewApplicationController extends Controller
         $application = CrewApplication::create($this->validated($request));
 
         return redirect()->route('applications.show', $application)
-            ->with('success', "{$application->application_code} dibuat.");
+            ->with('success', "{$application->application_code} created.");
     }
 
     public function show(CrewApplication $application)
@@ -94,7 +93,7 @@ class CrewApplicationController extends Controller
         $application->update($this->validated($request, $application));
 
         return redirect()->route('applications.show', $application)
-            ->with('success', "{$application->application_code} diperbarui.");
+            ->with('success', "{$application->application_code} updated.");
     }
 
     public function destroy(CrewApplication $application)
@@ -103,7 +102,7 @@ class CrewApplicationController extends Controller
 
         $application->delete();
 
-        return redirect()->route('applications.index')->with('success', "{$application->application_code} dihapus.");
+        return redirect()->route('applications.index')->with('success', "{$application->application_code} deleted.");
     }
 
     /** Move an application one stage forward (or straight to a chosen stage). */
@@ -121,13 +120,13 @@ class CrewApplicationController extends Controller
 
         try {
             $application->advance($data);
-        } catch (\Illuminate\Http\Client\RequestException $e) {
+        } catch (RequestException $e) {
             report($e);
 
-            return back()->withErrors(['erpnext' => 'ERP HPY menolak saat membuat Employee: ' . ($e->response->json('exception') ?: $e->response->status())]);
+            return back()->withErrors(['erpnext' => 'ERP HPY refused to create the Employee: '.($e->response->json('exception') ?: $e->response->status())]);
         }
 
-        return back()->with('success', "{$application->application_code} → tahap {$application->stage}.");
+        return back()->with('success', "{$application->application_code} → stage {$application->stage}.");
     }
 
     /** Close an application: rejected or withdrawn. */
@@ -142,7 +141,7 @@ class CrewApplicationController extends Controller
 
         $application->close($data['stage'], $data['rejection_reason'] ?? null);
 
-        return back()->with('success', "{$application->application_code} ditutup ({$data['stage']}).");
+        return back()->with('success', "{$application->application_code} closed ({$data['stage']}).");
     }
 
     private function formOptions(): array

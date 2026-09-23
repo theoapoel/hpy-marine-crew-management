@@ -131,7 +131,7 @@
                 <td class="px-6 py-3 text-slate-600 whitespace-pre-line">{{ $account->bank_address ?? '—' }}</td>
               </tr>
             @empty
-              <tr><td colspan="4" class="px-6 py-10 text-center text-muted">Belum ada rekening bank.</td></tr>
+              <tr><td colspan="4" class="px-6 py-10 text-center text-muted">No bank accounts yet.</td></tr>
             @endforelse
           </tbody>
         </table>
@@ -181,7 +181,7 @@
               </td>
             </tr>
           @empty
-            <tr><td colspan="7" class="px-6 py-10 text-center text-muted">Belum ada sertifikat.</td></tr>
+            <tr><td colspan="7" class="px-6 py-10 text-center text-muted">No certificates yet.</td></tr>
           @endforelse
         </tbody>
       </table>

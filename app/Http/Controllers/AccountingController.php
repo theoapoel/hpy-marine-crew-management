@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Erpnext\AccountingCharts;
 use App\Services\Erpnext\ErpnextClient;
 use App\Services\Erpnext\FinancialReports;
 use Illuminate\Http\Request;
@@ -19,8 +20,8 @@ class AccountingController extends Controller
     public function __construct(
         private readonly FinancialReports $reports,
         private readonly ErpnextClient $erpnext,
-    ) {
-    }
+        private readonly AccountingCharts $charts,
+    ) {}
 
     public function show(Request $request, string $report)
     {
@@ -29,7 +30,9 @@ class AccountingController extends Controller
         $definition = FinancialReports::REPORTS[$report];
         $input = $this->input($request, $definition['filters']);
 
-        return view('accounting.report', $this->reports->run($report, $input) + [
+        $result = $this->reports->run($report, $input);
+
+        return view('accounting.report', $result + $this->charts->build($report, $result['columns'], $result['rows']) + [
             'reports' => FinancialReports::REPORTS,
             'accounts' => in_array('account', $definition['filters'], true) ? $this->accounts() : [],
             'projects' => in_array('project', $definition['filters'], true) ? $this->projects() : [],
@@ -61,7 +64,7 @@ class AccountingController extends Controller
             'to_date' => ($data['to_date'] ?? null) ?: $period['to_date'],
             'account' => $data['account'] ?? null,
             'project' => $data['project'] ?? null,
-            'periodicity' => $data['periodicity'] ?? 'Yearly',
+            'periodicity' => $data['periodicity'] ?? 'Monthly',
         ];
     }
 

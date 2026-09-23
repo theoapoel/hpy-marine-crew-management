@@ -42,7 +42,7 @@
 
 {{-- Duplicate warning, filled by the NIK / seaman book lookup below --}}
 <div id="duplicate-warning" class="hidden bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg px-4 py-3">
-  <div class="font-medium">Kandidat serupa sudah ada di pool</div>
+  <div class="font-medium">A similar candidate is already in the pool</div>
   <ul id="duplicate-list" class="list-disc list-inside mt-1 space-y-0.5"></ul>
 </div>
 
@@ -59,10 +59,10 @@
     <div class="px-6 py-6">
 
       @if($key === 'personal')
-        <h3 class="text-sm font-semibold text-slate-900 mb-4">Data Pribadi</h3>
+        <h3 class="text-sm font-semibold text-slate-900 mb-4">Personal Details</h3>
         <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
           <div class="md:col-span-6 min-w-0">
-            <label class="{{ $label }}">Nama Lengkap *</label>
+            <label class="{{ $label }}">Full Name *</label>
             <input type="text" name="full_name" required value="{{ $val('full_name') }}" class="{{ $input }}">
           </div>
           <div class="md:col-span-3 min-w-0">
@@ -73,37 +73,37 @@
             </select>
           </div>
           <div class="md:col-span-3 min-w-0">
-            <label class="{{ $label }}">Tanggal Lahir *</label>
+            <label class="{{ $label }}">Date of Birth *</label>
             <input type="date" name="date_of_birth" required value="{{ $val('date_of_birth') }}" class="{{ $input }}">
           </div>
           <div class="md:col-span-3 min-w-0">
-            <label class="{{ $label }}">Tempat Lahir</label>
+            <label class="{{ $label }}">Place of Birth</label>
             <input type="text" name="place_of_birth" value="{{ $val('place_of_birth') }}" class="{{ $input }}">
           </div>
           <div class="md:col-span-3 min-w-0">
-            <label class="{{ $label }}">Kewarganegaraan</label>
+            <label class="{{ $label }}">Nationality</label>
             <input type="text" name="nationality" value="{{ $val('nationality', 'Indonesia') }}" class="{{ $input }}">
           </div>
           <div class="md:col-span-3 min-w-0">
-            <label class="{{ $label }}">Status Pernikahan</label>
+            <label class="{{ $label }}">Marital Status</label>
             <select name="marital_status" class="{{ $input }}">
               <option value="">—</option>
               @foreach($maritalStatuses as $m)<option value="{{ $m }}" @selected($val('marital_status') === $m)>{{ $text($m) }}</option>@endforeach
             </select>
           </div>
           <div class="md:col-span-3 min-w-0">
-            <label class="{{ $label }}">Agama</label>
+            <label class="{{ $label }}">Religion</label>
             <input type="text" name="religion" value="{{ $val('religion') }}" class="{{ $input }}">
           </div>
           <div class="md:col-span-3 min-w-0">
-            <label class="{{ $label }}">Golongan Darah</label>
+            <label class="{{ $label }}">Blood Type</label>
             <input type="text" name="blood_type" value="{{ $val('blood_type') }}" class="{{ $input }}">
           </div>
         </div>
       @endif
 
       @if($key === 'personal')
-        <div class="mt-8 pt-6 border-t border-line"><h3 class="text-sm font-semibold text-slate-900 mb-4">Identitas</h3></div>
+        <div class="mt-8 pt-6 border-t border-line"><h3 class="text-sm font-semibold text-slate-900 mb-4">Identity</h3></div>
         <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
           <div class="md:col-span-3 min-w-0">
             <label class="{{ $label }}">NIK (KTP)</label>
@@ -125,10 +125,10 @@
       @endif
 
       @if($key === 'personal')
-        <div class="mt-8 pt-6 border-t border-line"><h3 class="text-sm font-semibold text-slate-900 mb-4">Kontak</h3></div>
+        <div class="mt-8 pt-6 border-t border-line"><h3 class="text-sm font-semibold text-slate-900 mb-4">Contact</h3></div>
         <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
           <div class="md:col-span-3 min-w-0">
-            <label class="{{ $label }}">Telepon *</label>
+            <label class="{{ $label }}">Phone *</label>
             <input type="text" name="phone" required value="{{ $val('phone') }}" placeholder="081234567890" class="{{ $input }}">
           </div>
           <div class="md:col-span-3 min-w-0">
@@ -140,31 +140,31 @@
             <input type="email" name="email" value="{{ $val('email') }}" class="{{ $input }}">
           </div>
           <div class="md:col-span-12 min-w-0">
-            <label class="{{ $label }}">Alamat</label>
+            <label class="{{ $label }}">Address</label>
             <textarea name="address" rows="2" class="{{ $input }}">{{ $val('address') }}</textarea>
           </div>
           <div class="md:col-span-3 min-w-0">
-            <label class="{{ $label }}">Kota</label>
+            <label class="{{ $label }}">City</label>
             <input type="text" name="city" value="{{ $val('city') }}" class="{{ $input }}">
           </div>
           <div class="md:col-span-3 min-w-0">
-            <label class="{{ $label }}">Provinsi</label>
+            <label class="{{ $label }}">Province</label>
             <input type="text" name="province" value="{{ $val('province') }}" class="{{ $input }}">
           </div>
           <div class="md:col-span-3 min-w-0">
-            <label class="{{ $label }}">Kode Pos</label>
+            <label class="{{ $label }}">Postal Code</label>
             <input type="text" name="postal_code" value="{{ $val('postal_code') }}" class="{{ $input }}">
           </div>
           <div class="md:col-span-3 min-w-0">
-            <label class="{{ $label }}">Kontak Darurat</label>
+            <label class="{{ $label }}">Emergency Contact</label>
             <input type="text" name="emergency_contact_name" value="{{ $val('emergency_contact_name') }}" class="{{ $input }}">
           </div>
           <div class="md:col-span-3 min-w-0">
-            <label class="{{ $label }}">Hubungan</label>
+            <label class="{{ $label }}">Relationship</label>
             <input type="text" name="emergency_contact_relation" value="{{ $val('emergency_contact_relation') }}" class="{{ $input }}">
           </div>
           <div class="md:col-span-3 min-w-0">
-            <label class="{{ $label }}">Telepon Darurat</label>
+            <label class="{{ $label }}">Emergency Phone</label>
             <input type="text" name="emergency_contact_phone" value="{{ $val('emergency_contact_phone') }}" class="{{ $input }}">
           </div>
         </div>
@@ -184,7 +184,7 @@
             <input type="text" name="preferred_vessel_type" value="{{ $val('preferred_vessel_type') }}" class="{{ $input }}">
           </div>
           <div class="md:col-span-3 min-w-0">
-            <label class="{{ $label }}">Pengalaman (tahun)</label>
+            <label class="{{ $label }}">Experience (years)</label>
             <input type="number" name="years_of_experience" min="0" max="70" value="{{ $val('years_of_experience', 0) }}" class="{{ $input }}">
           </div>
           <div class="md:col-span-3 min-w-0">
@@ -192,11 +192,11 @@
             <input type="date" name="last_sign_off_date" value="{{ $val('last_sign_off_date') }}" class="{{ $input }}">
           </div>
           <div class="md:col-span-6 min-w-0">
-            <label class="{{ $label }}">Kapal Terakhir</label>
+            <label class="{{ $label }}">Last Vessel</label>
             <input type="text" name="last_vessel_name" value="{{ $val('last_vessel_name') }}" class="{{ $input }}">
           </div>
           <div class="md:col-span-3 min-w-0">
-            <label class="{{ $label }}">Rank Terakhir</label>
+            <label class="{{ $label }}">Last Rank</label>
             <input type="text" name="last_rank" value="{{ $val('last_rank') }}" class="{{ $input }}">
           </div>
         </div>
@@ -259,8 +259,8 @@
           <div id="cop-rows" class="space-y-2">
             @foreach($cops as $i => $cop)
               <div class="cop-row grid grid-cols-1 md:grid-cols-12 gap-2">
-                <input type="text" name="cop_certificates[{{ $i }}][name]" value="{{ $cop['name'] ?? '' }}" placeholder="Nama sertifikat (BST, AFF, ...)" class="{{ $input }} md:col-span-6">
-                <input type="text" name="cop_certificates[{{ $i }}][number]" value="{{ $cop['number'] ?? '' }}" placeholder="Nomor" class="{{ $input }} md:col-span-3">
+                <input type="text" name="cop_certificates[{{ $i }}][name]" value="{{ $cop['name'] ?? '' }}" placeholder="Certificate name (BST, AFF, ...)" class="{{ $input }} md:col-span-6">
+                <input type="text" name="cop_certificates[{{ $i }}][number]" value="{{ $cop['number'] ?? '' }}" placeholder="Number" class="{{ $input }} md:col-span-3">
                 <input type="date" name="cop_certificates[{{ $i }}][expiry]" value="{{ $cop['expiry'] ?? '' }}" aria-label="Expiry" class="{{ $input }} md:col-span-3">
               </div>
             @endforeach
@@ -282,7 +282,7 @@
           </div>
 
           <div data-source-field="referral">
-            <label class="{{ $label }}">Direferensikan oleh (Employee ID)</label>
+            <label class="{{ $label }}">Referred by (Employee ID)</label>
             <input type="text" name="referred_by_employee_id" value="{{ $val('referred_by_employee_id') }}" placeholder="HR-EMP-00001" class="{{ $input }}">
           </div>
           <div data-source-field="agency">
@@ -290,11 +290,11 @@
             <input type="text" name="source_agency_id" value="{{ $val('source_agency_id') }}" class="{{ $input }}">
           </div>
           <div data-source-field="school">
-            <label class="{{ $label }}">Sekolah / Akademi</label>
+            <label class="{{ $label }}">School / Academy</label>
             <input type="text" name="source_school" value="{{ $val('source_school') }}" class="{{ $input }}">
           </div>
           <div data-source-field="cost">
-            <label class="{{ $label }}">Biaya Rekrutmen</label>
+            <label class="{{ $label }}">Recruitment Cost</label>
             <input type="number" step="0.01" name="source_cost" value="{{ $val('source_cost') }}" class="{{ $input }}">
           </div>
 
@@ -317,7 +317,7 @@
             <input type="text" name="expected_salary_currency" value="{{ $val('expected_salary_currency', 'IDR') }}" class="{{ $input }}">
           </div>
           <div class="md:col-span-12 min-w-0">
-            <label class="{{ $label }}">Catatan</label>
+            <label class="{{ $label }}">Notes</label>
             <textarea name="notes" rows="3" class="{{ $input }}">{{ $val('notes') }}</textarea>
           </div>
         </div>
@@ -327,7 +327,7 @@
         @php $fileInput = $input . ' py-1.5 file:mr-3 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-xs'; @endphp
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           <div class="min-w-0">
-            <label class="{{ $label }}">Foto</label>
+            <label class="{{ $label }}">Photo</label>
             <div class="flex items-center gap-3">
               <img id="photo-preview" src="{{ $candidate?->photo_path ? Storage::url($candidate->photo_path) : '' }}"
                    class="w-12 h-12 rounded-lg object-cover border border-line shrink-0 {{ $candidate?->photo_path ? '' : 'hidden' }}" alt="">
@@ -335,20 +335,20 @@
             </div>
           </div>
 
-          @foreach(['cv' => 'CV', 'id_scan' => 'Scan KTP', 'seaman_book_scan' => 'Scan Seaman Book', 'coc_scan' => 'Scan COC'] as $field => $heading2)
+          @foreach(['cv' => 'CV', 'id_scan' => 'ID Card Scan (KTP)', 'seaman_book_scan' => 'Scan Seaman Book', 'coc_scan' => 'Scan COC'] as $field => $heading2)
             @php $stored = $candidate?->{$field . '_path'}; @endphp
             <div class="min-w-0">
               <label class="{{ $label }}">{{ $heading2 }}</label>
               <input type="file" name="{{ $field }}" accept="image/*,application/pdf" class="{{ $fileInput }}">
               @if($stored)
                 <button type="button" data-preview="{{ Storage::url($stored) }}" data-preview-title="{{ $heading2 }} — {{ basename($stored) }}"
-                        class="mt-1 text-[11px] text-brand hover:underline">Preview file saat ini ({{ basename($stored) }})</button>
+                        class="mt-1 text-[11px] text-brand hover:underline">Preview current file ({{ basename($stored) }})</button>
               @endif
             </div>
           @endforeach
 
           <div class="min-w-0">
-            <label class="{{ $label }}">Dokumen lain</label>
+            <label class="{{ $label }}">Other documents</label>
             <input type="file" name="other_documents[]" multiple class="{{ $fileInput }}">
             @foreach($candidate?->other_documents ?? [] as $doc)
               <button type="button" data-preview="{{ Storage::url($doc['path']) }}" data-preview-title="{{ $doc['name'] }}"
@@ -400,7 +400,7 @@
             list.innerHTML = '';
             data.matches.forEach(function (match) {
               var li = document.createElement('li');
-              li.innerHTML = match.field + ' sama dengan <a class="underline font-medium" href="' + match.url + '">' +
+              li.innerHTML = match.field + ' matches <a class="underline font-medium" href="' + match.url + '">' +
                 match.code + ' — ' + match.name + '</a> (' + match.status + ')';
               list.appendChild(li);
             });

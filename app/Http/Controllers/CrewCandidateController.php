@@ -7,6 +7,8 @@ use App\Models\CrewCandidate;
 use App\Services\Erpnext\ErpnextClient;
 use App\Services\Erpnext\ErpnextOptions;
 use App\Support\CocTypes;
+use App\Support\ErpUser;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -32,9 +34,7 @@ class CrewCandidateController extends Controller
         'coc_scan' => 'coc_scan_path',
     ];
 
-    public function __construct(private readonly ErpnextOptions $options)
-    {
-    }
+    public function __construct(private readonly ErpnextOptions $options) {}
 
     public function index(Request $request)
     {
@@ -88,8 +88,8 @@ class CrewCandidateController extends Controller
         $candidate = CrewCandidate::create($this->payload($request));
 
         return $request->input('after_save') === 'new'
-            ? redirect()->route('candidates.create')->with('success', "{$candidate->candidate_code} tersimpan. Tambah kandidat berikutnya.")
-            : redirect()->route('candidates.show', $candidate)->with('success', "{$candidate->candidate_code} tersimpan.");
+            ? redirect()->route('candidates.create')->with('success', "{$candidate->candidate_code} saved. Add the next candidate.")
+            : redirect()->route('candidates.show', $candidate)->with('success', "{$candidate->candidate_code} saved.");
     }
 
     public function show(CrewCandidate $candidate)
@@ -111,8 +111,8 @@ class CrewCandidateController extends Controller
         $candidate->update($this->payload($request, $candidate));
 
         return $request->input('after_save') === 'new'
-            ? redirect()->route('candidates.create')->with('success', "{$candidate->candidate_code} diperbarui.")
-            : redirect()->route('candidates.show', $candidate)->with('success', "{$candidate->candidate_code} diperbarui.");
+            ? redirect()->route('candidates.create')->with('success', "{$candidate->candidate_code} updated.")
+            : redirect()->route('candidates.show', $candidate)->with('success', "{$candidate->candidate_code} updated.");
     }
 
     public function destroy(CrewCandidate $candidate)
@@ -121,7 +121,7 @@ class CrewCandidateController extends Controller
 
         $candidate->delete();
 
-        return redirect()->route('candidates.index')->with('success', "{$candidate->candidate_code} dihapus.");
+        return redirect()->route('candidates.index')->with('success', "{$candidate->candidate_code} deleted.");
     }
 
     /** Bulk status change from the list's checkbox selection. */
@@ -132,15 +132,15 @@ class CrewCandidateController extends Controller
         $data = $request->validate([
             'ids' => ['required', 'array'],
             'ids.*' => ['integer'],
-            'status' => ['required', 'in:' . implode(',', CrewCandidate::STATUSES)],
+            'status' => ['required', 'in:'.implode(',', CrewCandidate::STATUSES)],
         ]);
 
         $changed = CrewCandidate::ofCompany()->whereIn('id', $data['ids'])->update([
             'status' => $data['status'],
-            'updated_by' => \App\Support\ErpUser::id(),
+            'updated_by' => ErpUser::id(),
         ]);
 
-        return back()->with('success', "{$changed} kandidat diubah ke status {$data['status']}.");
+        return back()->with('success', "{$changed} candidates moved to status {$data['status']}.");
     }
 
     /** Export the current filter selection (or a checkbox selection) as CSV. */
@@ -173,7 +173,7 @@ class CrewCandidateController extends Controller
             });
 
             fclose($handle);
-        }, 'candidate-pool-' . now()->format('Ymd-His') . '.csv', ['Content-Type' => 'text/csv']);
+        }, 'candidate-pool-'.now()->format('Ymd-His').'.csv', ['Content-Type' => 'text/csv']);
     }
 
     /**
@@ -223,19 +223,19 @@ class CrewCandidateController extends Controller
         Gate::authorize('candidates.update');
 
         if ($candidate->linked_employee_id) {
-            return back()->with('success', "Kandidat ini sudah menjadi Employee {$candidate->linked_employee_id}.");
+            return back()->with('success', "This candidate is already Employee {$candidate->linked_employee_id}.");
         }
 
         try {
             $employee = $candidate->promoteToEmployee();
-        } catch (\Illuminate\Http\Client\RequestException $e) {
+        } catch (RequestException $e) {
             report($e);
 
-            return back()->withErrors(['erpnext' => 'ERP HPY menolak: ' . ($e->response->json('exception') ?: $e->response->status())]);
+            return back()->withErrors(['erpnext' => 'ERP HPY rejected it: '.($e->response->json('exception') ?: $e->response->status())]);
         }
 
         return redirect()->route('crew.show', $employee->id)
-            ->with('success', "{$candidate->candidate_code} dipromosikan menjadi Employee {$employee->id}.");
+            ->with('success', "{$candidate->candidate_code} promoted to Employee {$employee->id}.");
     }
 
     /**
@@ -258,10 +258,10 @@ class CrewCandidateController extends Controller
             if (! $erpnext->exists(CocTypes::DOCTYPE, $name)) {
                 $erpnext->create(CocTypes::DOCTYPE, ['coc_type_name' => $name, 'is_active' => 1]);
             }
-        } catch (\Illuminate\Http\Client\RequestException $e) {
+        } catch (RequestException $e) {
             report($e);
 
-            return response()->json(['message' => 'ERP HPY rejected the type (status ' . $e->response->status() . ').'], 422);
+            return response()->json(['message' => 'ERP HPY rejected the type (status '.$e->response->status().').'], 422);
         }
 
         $this->options->forget(CocTypes::DOCTYPE);

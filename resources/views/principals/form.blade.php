@@ -81,7 +81,7 @@
 <div data-tab-panel="address-and-contact" class="space-y-5">
 <div class="bg-panel border border-line rounded-xl p-6 shadow-sm space-y-4" data-repeater="addresses">
   <div class="flex flex-wrap items-center justify-between gap-3">
-    <p class="text-[11px] text-muted">Satu baris per kantor. Baris pertama dipakai sebagai alamat utama.</p>
+    <p class="text-[11px] text-muted">One row per office. The first row is the main address.</p>
     <button type="button" data-repeater-add class="text-xs text-brand hover:text-brand-d font-medium">+ Add address</button>
   </div>
 
@@ -245,7 +245,7 @@
   <div class="flex items-center justify-end">
     <button type="button" id="add-contact" class="text-xs text-brand hover:text-brand-d font-medium">+ Add row</button>
   </div>
-  <p class="text-[11px] text-muted">Minimal satu contact person, dan tandai satu sebagai primary.</p>
+  <p class="text-[11px] text-muted">At least one contact person, with one marked as primary.</p>
 
   <div id="contact-rows" class="space-y-3">
     @foreach($contacts as $i => $contact)

@@ -2,7 +2,7 @@
   Horizontal bar chart — one series, biggest first, value at each bar's tip.
 
   rows:  [['label' => ..., 'value' => int, 'tip' => optional extra line, 'href' => optional,
-           'color' => optional hex for the whole bar,
+           'color' => optional hex for the whole bar, 'display' => optional text instead of the number,
            'segments' => optional [['name' => ..., 'value' => int, 'color' => hex], ...] to stack], ...]
   unit:  what the value counts, for tooltips and the table ("crew")
   empty: text for a zero value, shown as a flag instead of a bar (null = show 0)
@@ -25,16 +25,17 @@
       $segments = array_values(array_filter($row['segments'] ?? [], fn ($seg) => $seg['value'] > 0));
       $breakdown = collect($segments)->map(fn ($seg) => $seg['name'] . ' ' . $seg['value'])->implode(' · ');
       $tipExtra = implode(' · ', array_filter([$breakdown, $row['tip'] ?? null]));
+      $shown = $row['display'] ?? number_format($value);
     @endphp
     <{{ $tag }} @if($tag === 'a') href="{{ $row['href'] }}" @else tabindex="0" @endif
        data-tip data-tip-title="{{ $row['label'] }}"
-       data-tip-body="{{ $value }} {{ $unit }}{{ $tipExtra ? ' · ' . $tipExtra : '' }}"
+       data-tip-body="{{ isset($row['display']) ? $row['display'] : $value . ' ' . $unit }}{{ $tipExtra ? ' · ' . $tipExtra : '' }}"
        class="group block -mx-2 px-2 rounded-lg transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 outline-none focus-visible:ring-2 focus-visible:ring-brand/40
               {{ $stacked ? 'py-1.5' : 'grid grid-cols-[minmax(0,8.5rem)_1fr_2.75rem] sm:grid-cols-[minmax(0,10rem)_1fr_2.75rem] items-center gap-3 py-[7px]' }}">
       @if($stacked)
         <span class="flex items-baseline justify-between gap-3 mb-1">
           <span class="text-[13px] text-slate-700 truncate group-hover:text-slate-900">{{ $row['label'] }}</span>
-          <span class="text-[13px] font-semibold text-slate-900 tabular-nums">{{ number_format($value) }}</span>
+          <span class="text-[13px] font-semibold text-slate-900 tabular-nums whitespace-nowrap">{{ $shown }}</span>
         </span>
       @else
         <span class="text-[13px] text-slate-700 truncate group-hover:text-slate-900">{{ $row['label'] }}</span>
@@ -61,7 +62,7 @@
       </span>
 
       @unless($stacked)
-        <span class="text-right text-[13px] font-semibold text-slate-900 tabular-nums">{{ number_format($value) }}</span>
+        <span class="text-right text-[13px] font-semibold text-slate-900 tabular-nums">{{ $shown }}</span>
       @endunless
     </{{ $tag }}>
   @endforeach
@@ -75,7 +76,7 @@
     <thead><tr class="text-muted border-b border-line"><th class="text-left py-1.5 font-medium">{{ $label }}</th><th class="text-right py-1.5 font-medium capitalize">{{ $unit }}</th></tr></thead>
     <tbody>
       @foreach($rows as $row)
-        <tr class="border-b border-line last:border-0"><td class="py-1.5 text-slate-700">{{ $row['label'] }}@php $b = collect($row['segments'] ?? [])->filter(fn ($seg) => $seg['value'] > 0)->map(fn ($seg) => $seg['name'] . ' ' . $seg['value'])->implode(', '); @endphp{{ $b ? ' (' . $b . ')' : '' }}{{ !empty($row['tip']) ? ' — ' . $row['tip'] : '' }}</td><td class="py-1.5 text-right text-slate-900">{{ number_format($row['value']) }}</td></tr>
+        <tr class="border-b border-line last:border-0"><td class="py-1.5 text-slate-700">{{ $row['label'] }}@php $b = collect($row['segments'] ?? [])->filter(fn ($seg) => $seg['value'] > 0)->map(fn ($seg) => $seg['name'] . ' ' . $seg['value'])->implode(', '); @endphp{{ $b ? ' (' . $b . ')' : '' }}{{ !empty($row['tip']) ? ' — ' . $row['tip'] : '' }}</td><td class="py-1.5 text-right text-slate-900">{{ $row['display'] ?? number_format($row['value']) }}</td></tr>
       @endforeach
     </tbody>
   </table>

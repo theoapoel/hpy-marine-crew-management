@@ -97,7 +97,7 @@ class SeedCrewDocuments extends Command
         $document = $client->get('Employee', $name);
 
         if (! empty($document['custom_certificates']) && ! $this->option('force')) {
-            $this->line("  = {$name} (sudah punya sertifikat)");
+            $this->line("  = {$name} (already has certificates)");
 
             return;
         }
@@ -106,17 +106,17 @@ class SeedCrewDocuments extends Command
         $shift = $index * 15;
 
         $certificates = [
-            $this->row('Passport', 'C' . (1000000 + $index * 7331), 'Imigrasi Jakarta Selatan', now()->subYears(3), now()->addYears(2)->addDays($shift)),
-            $this->row('Seaman Book', 'SB-' . (200100 + $index * 37), 'Syahbandar Tanjung Priok', now()->subYears(2), now()->addDays(45 + $shift)),
-            $this->row('Medical Certificate', 'MCU-' . (77120 + $index * 11), 'Klinik Pelaut Jakarta', now()->subMonths(11), now()->addDays(20 + $shift)),
-            $this->row('Certificate of Competency', 'COC-' . (88450 + $index * 19), 'Ditjen Perhubungan Laut', now()->subYears(4), now()->addYears(1)->addDays($shift)),
-            $this->row('Basic Safety Training', 'BST-' . (55010 + $index * 23), 'BP3IP Jakarta', now()->subYears(5), now()->subDays(30 - $shift)),
-            $this->row('Yellow Fever', 'YF-' . (33020 + $index * 13), 'KKP Tanjung Priok', now()->subYears(2), now()->addYears(3)),
+            $this->row('Passport', 'C'.(1000000 + $index * 7331), 'Imigrasi Jakarta Selatan', now()->subYears(3), now()->addYears(2)->addDays($shift)),
+            $this->row('Seaman Book', 'SB-'.(200100 + $index * 37), 'Syahbandar Tanjung Priok', now()->subYears(2), now()->addDays(45 + $shift)),
+            $this->row('Medical Certificate', 'MCU-'.(77120 + $index * 11), 'Klinik Pelaut Jakarta', now()->subMonths(11), now()->addDays(20 + $shift)),
+            $this->row('Certificate of Competency', 'COC-'.(88450 + $index * 19), 'Ditjen Perhubungan Laut', now()->subYears(4), now()->addYears(1)->addDays($shift)),
+            $this->row('Basic Safety Training', 'BST-'.(55010 + $index * 23), 'BP3IP Jakarta', now()->subYears(5), now()->subDays(30 - $shift)),
+            $this->row('Yellow Fever', 'YF-'.(33020 + $index * 13), 'KKP Tanjung Priok', now()->subYears(2), now()->addYears(3)),
         ];
 
         $client->update('Employee', $name, ['custom_certificates' => $certificates]);
 
-        $this->info("  + {$name} — " . count($certificates) . ' sertifikat');
+        $this->info("  + {$name} — ".count($certificates).' sertifikat');
     }
 
     /** @return array<string, string> */

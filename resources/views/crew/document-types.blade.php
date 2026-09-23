@@ -11,7 +11,7 @@
 
   <div>
     <h1 class="text-2xl font-semibold text-slate-900">Document Types</h1>
-    <p class="text-sm text-muted mt-1">Pilihan <span class="font-medium text-slate-700">Type</span> di Certificates &amp; Documents Crew Master. Disimpan di master ERP HPY "Crew Certificate Type".</p>
+    <p class="text-sm text-muted mt-1">The <span class="font-medium text-slate-700">Type</span> options under Crew Master → Certificates &amp; Documents. Stored in the ERP HPY "Crew Certificate Type" master.</p>
   </div>
 
   @if($errors->any())
@@ -22,17 +22,17 @@
 
   @if(! $editable)
     <div class="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg px-4 py-3">
-      Master "Crew Certificate Type" belum ada di ERP HPY, jadi pilihannya masih daftar bawaan
-      ({{ count($shipped) }} tipe) dan belum bisa ditambah. Jalankan <code class="font-mono text-xs">php artisan erp:sync-crew-fields</code> sekali.
+      The "Crew Certificate Type" master does not exist in ERP HPY yet, so the built-in list
+      ({{ count($shipped) }} types) is offered and nothing can be added. Run <code class="font-mono text-xs">php artisan erp:sync-crew-fields</code> once.
     </div>
   @else
     <form method="POST" action="{{ route('crew.document-types.store') }}" class="bg-panel border border-line rounded-xl p-6 shadow-sm">
       @csrf
-      <h2 class="text-sm font-semibold text-slate-900 mb-4">Tambah document type</h2>
+      <h2 class="text-sm font-semibold text-slate-900 mb-4">Add document type</h2>
       <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
         <div class="md:col-span-5 min-w-0">
           <label class="{{ $label }}">Name *</label>
-          <input type="text" name="certificate_name" required maxlength="140" value="{{ old('certificate_name') }}" placeholder="Contoh: Tanker Familiarization" class="{{ $input }}">
+          <input type="text" name="certificate_name" required maxlength="140" value="{{ old('certificate_name') }}" placeholder="e.g. Tanker Familiarization" class="{{ $input }}">
         </div>
         <div class="md:col-span-3 min-w-0">
           <label class="{{ $label }}">Category</label>
@@ -93,13 +93,13 @@
                 </td>
               </tr>
             @empty
-              <tr><td colspan="5" class="px-5 py-10 text-center text-muted">Belum ada document type.</td></tr>
+              <tr><td colspan="5" class="px-5 py-10 text-center text-muted">No document types yet.</td></tr>
             @endforelse
           @else
             @foreach($shipped as $name)
               <tr class="border-t border-line">
                 <td class="px-5 py-2.5 text-slate-900 font-medium">{{ $name }}</td>
-                <td class="px-3 py-2.5 text-muted" colspan="4">Daftar bawaan</td>
+                <td class="px-3 py-2.5 text-muted" colspan="4">Built-in list</td>
               </tr>
             @endforeach
           @endif

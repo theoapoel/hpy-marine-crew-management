@@ -29,14 +29,14 @@
 
 <div data-tab-group>
   <div class="flex flex-wrap items-center gap-1 border-b border-line mb-5">
-    <button type="button" data-tab-target="penugasan" class="px-4 py-2 text-sm border-b-2 -mb-px border-transparent text-muted hover:text-slate-900">Penugasan</button>
+    <button type="button" data-tab-target="penugasan" class="px-4 py-2 text-sm border-b-2 -mb-px border-transparent text-muted hover:text-slate-900">Assignment</button>
     <button type="button" data-tab-target="sign-on-sign-off" class="px-4 py-2 text-sm border-b-2 -mb-px border-transparent text-muted hover:text-slate-900">Sign On / Sign Off</button>
   </div>
 <div data-tab-panel="penugasan" class="space-y-5">
 <div class="bg-panel border border-line rounded-xl p-6 shadow-sm">
   <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
     <div class="md:col-span-6 min-w-0">
-      <label class="{{ $label }}">Nama Crew *</label>
+      <label class="{{ $label }}">Crew Name *</label>
       <input type="text" name="crew_name" required value="{{ $val('crew_name') }}" class="{{ $input }}" list="crew-names">
       <datalist id="crew-names">
         @foreach($candidates as $candidate)<option value="{{ $candidate->full_name }}">@endforeach
@@ -45,9 +45,9 @@
     </div>
 
     <div class="md:col-span-3 min-w-0">
-      <label class="{{ $label }}">Kandidat</label>
+      <label class="{{ $label }}">Candidate</label>
       <select name="crew_candidate_id" data-fill class="{{ $input }}">
-        <option value="">— Otomatis dari nama —</option>
+        <option value="">— Auto-match by name —</option>
         @foreach($candidates as $candidate)
           <option value="{{ $candidate->id }}" data-name="{{ $candidate->full_name }}" data-employee="{{ $candidate->linked_employee_id }}" data-rank="{{ $candidate->applied_rank }}"
                   @selected((string) $val('crew_candidate_id') === (string) $candidate->id)>
@@ -61,7 +61,7 @@
       <label class="{{ $label }}">Employee (ERP HPY)</label>
       @php $employeeId = (string) $val('employee_id'); @endphp
       <select name="employee_id" data-fill class="{{ $input }}">
-        <option value="">— Otomatis dari nama —</option>
+        <option value="">— Auto-match by name —</option>
         @if($employeeId !== '' && ! collect($crews)->contains('id', $employeeId))
           <option value="{{ $employeeId }}" selected>{{ $employeeId }}</option>
         @endif
@@ -74,11 +74,11 @@
     </div>
 
     <p class="md:col-span-12 -mt-2 text-[11px] text-muted">
-      Kosongkan Kandidat / Employee untuk ditautkan otomatis dari nama saat disimpan. Tanpa Employee, perubahan tidak sampai ke Crew Master di ERP HPY.
+      Leave Candidate / Employee empty to link them by name on save. Without an Employee, changes do not reach Crew Master in ERP HPY.
     </p>
 
     <div class="md:col-span-3 min-w-0">
-      <label class="{{ $label }}">Kapal</label>
+      <label class="{{ $label }}">Vessel</label>
       <select name="vessel" class="{{ $input }}">
         <option value="">—</option>
         @foreach($vessels as $vessel)<option value="{{ $vessel }}" @selected($val('vessel') === $vessel)>{{ $vessel }}</option>@endforeach
@@ -101,9 +101,9 @@
     </div>
 
     <div class="md:col-span-3 min-w-0">
-      <label class="{{ $label }}">Upah</label>
+      <label class="{{ $label }}">Wage</label>
       <div class="flex">
-        <select name="wage_currency" aria-label="Mata uang upah"
+        <select name="wage_currency" aria-label="Wage currency"
                 class="bg-slate-50 border border-line border-r-0 rounded-l-md py-2 pl-2 pr-7 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand">
           @foreach(collect($currencies)->push($val('wage_currency', 'IDR'))->unique() as $currency)
             <option value="{{ $currency }}" @selected($val('wage_currency', 'IDR') === $currency)>{{ $currency }}</option>
@@ -121,7 +121,7 @@
 <div class="bg-panel border border-line rounded-xl p-6 shadow-sm" data-contract>
   <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
     <div class="md:col-span-3 min-w-0">
-      <label class="{{ $label }}">Rencana Sign On</label>
+      <label class="{{ $label }}">Planned Sign On</label>
       <input type="date" name="planned_sign_on_date" data-contract-planned value="{{ $val('planned_sign_on_date') }}" class="{{ $input }}">
     </div>
     <div class="md:col-span-3 min-w-0">
@@ -129,15 +129,15 @@
       <input type="date" name="sign_on_date" data-contract-start value="{{ $val('sign_on_date') }}" class="{{ $input }}">
     </div>
     <div class="md:col-span-3 min-w-0">
-      <label class="{{ $label }}">Pelabuhan Sign On</label>
+      <label class="{{ $label }}">Sign On Port</label>
       <input type="text" name="sign_on_port" value="{{ $val('sign_on_port') }}" class="{{ $input }}">
     </div>
     <div class="md:col-span-3 min-w-0">
-      <label class="{{ $label }}">Kontrak (bulan)</label>
+      <label class="{{ $label }}">Contract (months)</label>
       <input type="number" name="contract_months" data-contract-months min="1" max="36" value="{{ $val('contract_months') }}" class="{{ $input }}">
     </div>
     <div class="md:col-span-3 min-w-0">
-      <label class="{{ $label }}">Rencana Sign Off</label>
+      <label class="{{ $label }}">Planned Sign Off</label>
       <input type="date" name="planned_sign_off_date" data-contract-end value="{{ $val('planned_sign_off_date') }}" class="{{ $input }}">
       <p data-contract-hint class="text-[11px] text-muted mt-1" aria-live="polite"></p>
     </div>
@@ -146,15 +146,15 @@
       <input type="date" name="sign_off_date" value="{{ $val('sign_off_date') }}" class="{{ $input }}">
     </div>
     <div class="md:col-span-3 min-w-0">
-      <label class="{{ $label }}">Pelabuhan Sign Off</label>
+      <label class="{{ $label }}">Sign Off Port</label>
       <input type="text" name="sign_off_port" value="{{ $val('sign_off_port') }}" class="{{ $input }}">
     </div>
     <div class="md:col-span-3 min-w-0">
-      <label class="{{ $label }}">Alasan Sign Off</label>
+      <label class="{{ $label }}">Sign Off Reason</label>
       <input type="text" name="sign_off_reason" value="{{ $val('sign_off_reason') }}" class="{{ $input }}">
     </div>
     <div class="md:col-span-12 min-w-0">
-      <label class="{{ $label }}">Catatan</label>
+      <label class="{{ $label }}">Notes</label>
       <textarea name="notes" rows="3" class="{{ $input }}">{{ $val('notes') }}</textarea>
     </div>
   </div>

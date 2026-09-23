@@ -2,7 +2,9 @@
 
 namespace App\Services\Erpnext;
 
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 /**
  * The four accounting screens — General Ledger, Trial Balance, Balance Sheet and
@@ -53,9 +55,7 @@ class FinancialReports
         ],
     ];
 
-    public function __construct(private readonly ErpnextClient $erpnext)
-    {
-    }
+    public function __construct(private readonly ErpnextClient $erpnext) {}
 
     /**
      * Run one of them.
@@ -133,8 +133,10 @@ class FinancialReports
                 'filter_based_on' => 'Date Range',
                 'period_start_date' => $from,
                 'period_end_date' => $to,
-                'periodicity' => $input['periodicity'] ?? 'Yearly',
-                'accumulated_values' => 1,
+                'periodicity' => $input['periodicity'] ?? 'Monthly',
+                // A balance sheet is a position, so it runs to date; profit and loss
+                // is a flow, so each column is its own period and ERP adds a Total.
+                'accumulated_values' => $slug === 'balance-sheet' ? 1 : 0,
             ],
         };
     }
@@ -171,7 +173,7 @@ class FinancialReports
             $type = (string) ($definition['fieldtype'] ?? 'Data');
 
             return [
-                'fieldname' => (string) ($definition['fieldname'] ?? ($definition['label'] ?? 'col' . $index)),
+                'fieldname' => (string) ($definition['fieldname'] ?? ($definition['label'] ?? 'col'.$index)),
                 'label' => (string) ($definition['label'] ?? ($definition['fieldname'] ?? '')),
                 'type' => $type,
                 'numeric' => in_array($type, ['Currency', 'Float', 'Int', 'Percent'], true),
@@ -190,7 +192,7 @@ class FinancialReports
 
         return [
             'label' => $label,
-            'fieldname' => \Illuminate\Support\Str::snake($label),
+            'fieldname' => Str::snake($label),
             'fieldtype' => explode('/', (string) $type)[0] ?: 'Data',
         ];
     }
@@ -245,8 +247,8 @@ class FinancialReports
     /** ERP HPY's refusals are worth reading; its stack traces are not. */
     private function message(\Throwable $e): string
     {
-        if ($e instanceof \Illuminate\Http\Client\RequestException) {
-            $message = (string) ($e->response->json('exception') ?: 'status ' . $e->response->status());
+        if ($e instanceof RequestException) {
+            $message = (string) ($e->response->json('exception') ?: 'status '.$e->response->status());
 
             return trim(preg_replace('/^[\w.]+Error:\s*/', '', strip_tags($message)));
         }

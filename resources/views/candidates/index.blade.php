@@ -24,7 +24,7 @@
   <div class="flex items-start justify-between">
     <div>
       <h1 class="text-2xl font-semibold text-slate-900">Candidate Pool</h1>
-      <p class="text-sm text-muted mt-1">{{ $candidates->total() }} kandidat pelaut</p>
+      <p class="text-sm text-muted mt-1">{{ $candidates->total() }} seafarer candidates</p>
     </div>
     <div class="flex items-center gap-2">
       <a href="{{ route('candidates.export', request()->query()) }}"
@@ -41,33 +41,33 @@
 
   {{-- Filters: submitted on change, so it behaves like a live filter --}}
   <form method="GET" class="flex flex-wrap gap-2" id="filters">
-    <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Cari nama, seaman book, HP, NIK..."
+    <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Search name, seaman book, phone, NIK..."
            class="bg-white border border-line rounded-md py-2 px-3 text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand w-72">
 
     <select name="status" class="bg-white border border-line rounded-md py-2 px-3 text-sm">
-      <option value="">Semua status</option>
+      <option value="">All statuses</option>
       @foreach($statuses as $s)<option value="{{ $s }}" @selected(($filters['status'] ?? '') === $s)>{{ $label($s) }}</option>@endforeach
     </select>
 
     <select name="source" class="bg-white border border-line rounded-md py-2 px-3 text-sm">
-      <option value="">Semua source</option>
+      <option value="">All sources</option>
       @foreach($sources as $s)<option value="{{ $s }}" @selected(($filters['source'] ?? '') === $s)>{{ $label($s) }}</option>@endforeach
     </select>
 
     <select name="applied_rank" class="bg-white border border-line rounded-md py-2 px-3 text-sm">
-      <option value="">Semua rank</option>
+      <option value="">All ranks</option>
       @foreach($ranks as $r)<option value="{{ $r }}" @selected(($filters['applied_rank'] ?? '') === $r)>{{ $r }}</option>@endforeach
     </select>
 
     <select name="coc_type" class="bg-white border border-line rounded-md py-2 px-3 text-sm">
-      <option value="">Semua COC</option>
+      <option value="">All COC</option>
       @foreach($cocTypes as $c)<option value="{{ $c }}" @selected(($filters['coc_type'] ?? '') === $c)>{{ $c }}</option>@endforeach
     </select>
 
     <select name="availability" class="bg-white border border-line rounded-md py-2 px-3 text-sm">
-      <option value="">Semua ketersediaan</option>
+      <option value="">All availability</option>
       <option value="available" @selected(($filters['availability'] ?? '') === 'available')>Available</option>
-      <option value="unavailable" @selected(($filters['availability'] ?? '') === 'unavailable')>Tidak available</option>
+      <option value="unavailable" @selected(($filters['availability'] ?? '') === 'unavailable')>Not available</option>
     </select>
 
     <button class="bg-white hover:bg-slate-50 border border-line text-slate-700 text-sm rounded-md px-4 py-2">Filter</button>
@@ -82,11 +82,11 @@
     <div id="bulk-bar" class="hidden items-center gap-2 bg-brand/5 border border-brand/20 rounded-lg px-4 py-2 text-sm mb-3">
       <span class="text-slate-700"><span id="bulk-count">0</span> dipilih</span>
       <select name="status" required class="bg-white border border-line rounded-md py-1.5 px-2 text-sm">
-        <option value="">Ubah status ke...</option>
+        <option value="">Change status to...</option>
         @foreach($statuses as $s)<option value="{{ $s }}">{{ $label($s) }}</option>@endforeach
       </select>
-      <button class="bg-brand hover:bg-brand-d text-white rounded-md px-3 py-1.5">Terapkan</button>
-      <button type="button" id="bulk-export" class="border border-line bg-white rounded-md px-3 py-1.5">Export terpilih</button>
+      <button class="bg-brand hover:bg-brand-d text-white rounded-md px-3 py-1.5">Apply</button>
+      <button type="button" id="bulk-export" class="border border-line bg-white rounded-md px-3 py-1.5">Export selected</button>
     </div>
 
     <div class="bg-panel border border-line rounded-xl overflow-hidden shadow-sm">
@@ -96,7 +96,7 @@
             <tr class="text-[11px] uppercase text-muted tracking-wider bg-slate-50 border-b border-line">
               <th class="px-4 py-3 w-8"><input type="checkbox" id="check-all"></th>
               <th class="text-left px-3 py-3 font-medium">Code</th>
-              <th class="text-left px-3 py-3 font-medium">{!! $sortLink('full_name', 'Nama') !!}</th>
+              <th class="text-left px-3 py-3 font-medium">{!! $sortLink('full_name', 'Name') !!}</th>
               <th class="text-left px-3 py-3 font-medium">Applied Rank</th>
               <th class="text-left px-3 py-3 font-medium">COC</th>
               <th class="text-left px-3 py-3 font-medium">Status</th>
@@ -143,7 +143,7 @@
                 </td>
               </tr>
             @empty
-              <tr><td colspan="9" class="px-5 py-10 text-center text-muted">Belum ada kandidat.</td></tr>
+              <tr><td colspan="9" class="px-5 py-10 text-center text-muted">No candidates yet.</td></tr>
             @endforelse
           </tbody>
         </table>
@@ -156,12 +156,12 @@
   {{-- Delete confirmation --}}
   <div id="delete-modal" class="hidden fixed inset-0 bg-slate-900/40 items-center justify-center p-6 z-50">
     <div class="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
-      <h2 class="text-base font-semibold text-slate-900">Hapus kandidat?</h2>
-      <p class="text-sm text-muted mt-2"><span id="delete-name" class="font-medium text-slate-700"></span> akan dihapus dari Candidate Pool.</p>
+      <h2 class="text-base font-semibold text-slate-900">Delete candidate?</h2>
+      <p class="text-sm text-muted mt-2"><span id="delete-name" class="font-medium text-slate-700"></span> will be removed from the Candidate Pool.</p>
       <form method="POST" id="delete-form" class="mt-5 flex justify-end gap-2">
         @csrf @method('DELETE')
-        <button type="button" id="delete-cancel" class="text-sm text-muted hover:text-slate-900 px-3 py-2">Batal</button>
-        <button class="bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium rounded-md px-4 py-2">Hapus</button>
+        <button type="button" id="delete-cancel" class="text-sm text-muted hover:text-slate-900 px-3 py-2">Cancel</button>
+        <button class="bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium rounded-md px-4 py-2">Delete</button>
       </form>
     </div>
   </div>

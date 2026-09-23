@@ -106,7 +106,7 @@
         <input type="file" name="photo" accept="image/*" class="{{ $fileInput }}">
       </div>
       @if($crew?->image)
-        <p class="text-[11px] text-muted mt-1">Biarkan kosong untuk mempertahankan foto ini.</p>
+        <p class="text-[11px] text-muted mt-1">Leave empty to keep this photo.</p>
       @endif
     </div>
   </div>
@@ -208,7 +208,7 @@
       <input type="text" name="health_details" value="{{ $val('health_details') }}" class="{{ $input }}">
     </div>
   </div>
-  <p class="mt-4 text-[11px] text-muted">Passport dan Seaman Book diisi di tab <span class="font-medium text-slate-600">Certificates &amp; Documents</span>.</p>
+  <p class="mt-4 text-[11px] text-muted">Passport and Seaman Book are entered on the <span class="font-medium text-slate-600">Certificates &amp; Documents</span> tab.</p>
 </div>
 
 <div class="bg-panel border border-line rounded-xl p-6 shadow-sm">
@@ -277,7 +277,7 @@
   <div class="flex items-center justify-between">
     <div>
       <h3 class="text-sm font-semibold text-slate-900">Bank Accounts</h3>
-      <p class="text-[11px] text-muted mt-0.5">Rekening pertama dipakai sebagai rekening utama (payroll).</p>
+      <p class="text-[11px] text-muted mt-0.5">The first account is the main (payroll) account.</p>
     </div>
     <button type="button" data-repeater-add class="text-xs text-brand hover:text-brand-d font-medium">+ Add account</button>
   </div>
@@ -317,7 +317,7 @@
 <div data-tab-panel="certificates" class="space-y-5">
 <div class="bg-panel border border-line rounded-xl p-6 shadow-sm space-y-4" data-repeater="certificates">
   <div class="flex flex-wrap items-center justify-between gap-3" data-type-anchor="cert">
-    <p class="text-[11px] text-muted">Passport, Seaman Book, dan sertifikat lain — satu baris per dokumen.</p>
+    <p class="text-[11px] text-muted">Passport, Seaman Book and other certificates — one row per document.</p>
     <div class="flex items-center gap-4">
       @if($certificateTypesEditable)
         <button type="button" data-type-new="cert" data-type-label="certificate type" data-url="{{ route('crew.certificate-types.store') }}"
@@ -370,7 +370,7 @@
             <button type="button" data-repeater-clear data-preview="{{ $previewable($row['attachment']) }}"
                     data-preview-title="{{ ($row['certificate_type'] ?? 'Document') . ' — ' . basename($row['attachment']) }}"
                     class="mt-1 inline-flex items-center gap-1 text-[11px] text-brand hover:underline">
-              Preview file saat ini ({{ basename($row['attachment']) }})
+              Preview current file ({{ basename($row['attachment']) }})
             </button>
           @endif
         </div>

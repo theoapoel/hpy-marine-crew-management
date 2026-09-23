@@ -21,11 +21,11 @@
       <h1 class="text-2xl font-semibold text-slate-900 mt-2">{{ $assignment->crew_name }}</h1>
       <p class="text-sm text-muted mt-1">
         <span class="font-mono">{{ $assignment->assignment_code }}</span> ·
-        {{ $assignment->rank ?: '—' }} · {{ $assignment->vessel ?: 'kapal belum ditentukan' }}
+        {{ $assignment->rank ?: '—' }} · {{ $assignment->vessel ?: 'vessel not set' }}
       </p>
       <div class="mt-2">
         <span class="chip border {{ $colors[$assignment->status] ?? '' }}">{{ $text($assignment->status) }}</span>
-        @if($assignment->is_overdue)<span class="chip border bg-rose-50 text-rose-700 border-rose-200 ml-1">lewat kontrak</span>@endif
+        @if($assignment->is_overdue)<span class="chip border bg-rose-50 text-rose-700 border-rose-200 ml-1">past contract</span>@endif
       </div>
     </div>
     <div class="flex items-center gap-2">
@@ -34,12 +34,12 @@
         @if($assignment->status === 'planned')
           <form method="POST" action="{{ route('assignments.do-sign-on', $assignment) }}">
             @csrf
-            <button class="bg-brand hover:bg-brand-d text-white text-sm font-medium rounded-md px-4 py-2 shadow-sm">Sign On sekarang</button>
+            <button class="bg-brand hover:bg-brand-d text-white text-sm font-medium rounded-md px-4 py-2 shadow-sm">Sign On now</button>
           </form>
         @elseif($assignment->status === 'onboard')
           <form method="POST" action="{{ route('assignments.do-sign-off', $assignment) }}">
             @csrf
-            <button class="bg-brand hover:bg-brand-d text-white text-sm font-medium rounded-md px-4 py-2 shadow-sm">Sign Off sekarang</button>
+            <button class="bg-brand hover:bg-brand-d text-white text-sm font-medium rounded-md px-4 py-2 shadow-sm">Sign Off now</button>
           </form>
         @endif
       @endcan
@@ -49,22 +49,22 @@
   @php
     $rows = [
       'Employee (ERP HPY)' => $assignment->employee_id,
-      'Kandidat' => $assignment->candidate?->candidate_code,
-      'Lamaran' => $assignment->application?->application_code,
-      'Kapal' => $assignment->vessel,
+      'Candidate' => $assignment->candidate?->candidate_code,
+      'Application' => $assignment->application?->application_code,
+      'Vessel' => $assignment->vessel,
       'Rank' => $assignment->rank,
-      'Rencana Sign On' => $fmt($assignment->planned_sign_on_date),
+      'Planned Sign On' => $fmt($assignment->planned_sign_on_date),
       'Sign On' => $fmt($assignment->sign_on_date),
-      'Pelabuhan Sign On' => $assignment->sign_on_port,
-      'Kontrak' => $assignment->contract_months ? $assignment->contract_months . ' bulan' : null,
-      'Rencana Sign Off' => $fmt($assignment->planned_sign_off_date),
+      'Sign On Port' => $assignment->sign_on_port,
+      'Contract' => $assignment->contract_months ? $assignment->contract_months . ' months' : null,
+      'Planned Sign Off' => $fmt($assignment->planned_sign_off_date),
       'Sign Off' => $fmt($assignment->sign_off_date),
-      'Pelabuhan Sign Off' => $assignment->sign_off_port,
-      'Alasan Sign Off' => $assignment->sign_off_reason,
-      'Hari di Kapal' => $assignment->days_onboard !== null ? $assignment->days_onboard . ' hari' : null,
-      'Upah' => $assignment->wage ? $assignment->wage_currency . ' ' . number_format((float) $assignment->wage, 2) : null,
+      'Sign Off Port' => $assignment->sign_off_port,
+      'Sign Off Reason' => $assignment->sign_off_reason,
+      'Days on Board' => $assignment->days_onboard !== null ? $assignment->days_onboard . ' days' : null,
+      'Wage' => $assignment->wage ? $assignment->wage_currency . ' ' . number_format((float) $assignment->wage, 2) : null,
     ];
-    $links = ['Employee (ERP HPY)', 'Kandidat', 'Lamaran'];
+    $links = ['Employee (ERP HPY)', 'Candidate', 'Application'];
     $unlinked = blank($assignment->employee_id) || ! $assignment->candidate || ! $assignment->application;
   @endphp
 
@@ -76,15 +76,15 @@
     <div class="flex flex-wrap items-center gap-3 bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl px-4 py-3">
       <span class="flex-1 min-w-60">
         @if(blank($assignment->employee_id))
-          Assignment ini belum ditautkan ke Employee di ERP HPY, jadi perubahannya tidak sampai ke Crew Master.
+          This assignment is not linked to an Employee in ERP HPY, so its changes do not reach Crew Master.
         @else
-          Kandidat / lamaran belum ditautkan.
+          Candidate / application not linked.
         @endif
       </span>
       @can('assignments.update')
         <form method="POST" action="{{ route('assignments.link', $assignment) }}">
           @csrf
-          <button class="bg-white hover:bg-amber-100 border border-amber-300 text-amber-900 text-xs font-medium rounded-md px-3 py-1.5">Tautkan otomatis</button>
+          <button class="bg-white hover:bg-amber-100 border border-amber-300 text-amber-900 text-xs font-medium rounded-md px-3 py-1.5">Link automatically</button>
         </form>
       @endcan
     </div>
@@ -98,16 +98,16 @@
           <div class="text-[11px] uppercase tracking-wider text-muted">{{ $labelText }}</div>
           <div class="text-slate-800 mt-1 font-medium">
             @if(in_array($labelText, $links, true) && blank($value))
-              <span class="text-amber-700 font-normal">Belum ditautkan</span>
+              <span class="text-amber-700 font-normal">Not linked</span>
             @elseif($labelText === 'Employee (ERP HPY)')
               <a href="{{ route('crew.show', $value) }}" class="text-brand hover:underline">{{ $value }}</a>
-            @elseif($labelText === 'Kandidat')
+            @elseif($labelText === 'Candidate')
               <a href="{{ route('candidates.show', $assignment->candidate) }}" class="text-brand hover:underline">{{ $value }}</a>
               <span class="text-muted font-normal">· {{ $assignment->candidate->full_name }}</span>
-            @elseif($labelText === 'Lamaran')
+            @elseif($labelText === 'Application')
               <a href="{{ route('applications.show', $assignment->application) }}" class="text-brand hover:underline">{{ $value }}</a>
               <span class="text-muted font-normal">· {{ ucfirst($assignment->application->stage) }}</span>
-            @elseif($labelText === 'Kapal' && filled($value))
+            @elseif($labelText === 'Vessel' && filled($value))
               <a href="{{ route('vessels.show', $value) }}" class="text-brand hover:underline">{{ $value }}</a>
             @else
               {{ filled($value) ? $value : '—' }}
@@ -120,7 +120,7 @@
 
   @if($assignment->notes)
     <div class="bg-panel border border-line rounded-xl p-6 shadow-sm">
-      <h2 class="text-sm font-semibold text-slate-900 mb-2">Catatan</h2>
+      <h2 class="text-sm font-semibold text-slate-900 mb-2">Notes</h2>
       <p class="text-sm text-slate-700 whitespace-pre-line">{{ $assignment->notes }}</p>
     </div>
   @endif
