@@ -183,4 +183,62 @@ class PrincipalTest extends TestCase
             ->expectsOutputToContain('1 synced, 0 failed.')
             ->assertSuccessful();
     }
+
+    public function test_addresses_and_manning_fees_are_saved_as_rows_with_wechat(): void
+    {
+        $this->fakeErp([
+            '*/api/resource/Principal' => Http::response(['data' => ['name' => 'PRN-0001']]),
+        ]);
+
+        $this->post('/principals', $this->payload([
+            'addresses' => [
+                ['address_type' => 'Head Office', 'address' => '10 Anson Road', 'city' => 'Singapore', 'phone' => '+65 6222', 'wechat' => 'mol_sg'],
+                ['address_type' => 'Branch Office', 'address' => 'Jl. Sudirman 45', 'city' => 'Jakarta'],
+                ['address_type' => 'Other'], // blank row from the form
+            ],
+            'manning_fees' => [
+                ['fee_type' => 'per_crew', 'amount' => '350', 'currency' => 'USD', 'description' => 'Officers'],
+                ['fee_type' => 'flat_monthly', 'amount' => '75000000', 'currency' => 'IDR'],
+                ['currency' => 'IDR'], // blank row
+            ],
+            'contact_persons' => [
+                ['name' => 'Li Wei', 'wechat' => 'liwei88', 'is_primary' => '1'],
+            ],
+        ]))->assertSessionHasNoErrors()->assertRedirect();
+
+        $principal = Principal::sole();
+
+        $this->assertCount(2, $principal->addresses);
+        $this->assertCount(2, $principal->manning_fees);
+        // The first rows stay on the single columns.
+        $this->assertSame('10 Anson Road', $principal->head_office_address);
+        $this->assertSame('mol_sg', $principal->wechat);
+        $this->assertSame('per_crew', $principal->manning_fee_type);
+        $this->assertSame('USD', $principal->currency);
+        $this->assertSame('liwei88', $principal->primary_contact->wechat);
+
+        Http::assertSent(fn ($r) => $r->method() === 'POST' && str_ends_with(urldecode($r->url()), '/api/resource/Principal')
+            && count($r['addresses']) === 2 && $r['manning_fees'][1]['fee_type'] === 'Flat Monthly'
+            && $r['contact_persons'][0]['wechat'] === 'liwei88');
+
+        $this->get('/principals/' . $principal->uuid)->assertOk()
+            ->assertSee('Jl. Sudirman 45')->assertSee('Flat Monthly')->assertSee('75,000,000.00');
+        $this->get('/principals/' . $principal->uuid . '/edit')->assertOk()
+            ->assertSee('name="addresses[1][address]"', false)
+            ->assertSee('name="manning_fees[1][amount]"', false)
+            ->assertSee('name="contact_persons[0][wechat]"', false);
+    }
+
+    public function test_a_principal_saved_before_rows_existed_shows_its_single_address_and_fee(): void
+    {
+        $this->fakeErp();
+
+        $principal = Principal::create($this->payload([
+            'head_office_address' => 'Sampoerna Strategic Square', 'manning_fee_type' => 'per_crew', 'manning_fee_amount' => 3500000,
+        ]));
+
+        $this->assertSame('Head Office', $principal->addressRows()[0]['address_type']);
+        $this->assertSame('IDR', $principal->feeRows()[0]['currency']);
+        $this->get('/principals/' . $principal->uuid . '/edit')->assertOk()->assertSee('Sampoerna Strategic Square');
+    }
 }

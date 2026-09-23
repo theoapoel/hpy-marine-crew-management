@@ -7,6 +7,7 @@ use App\Http\Controllers\CrewApplicationController;
 use App\Http\Controllers\CrewAssignmentController;
 use App\Http\Controllers\CrewCandidateController;
 use App\Http\Controllers\CrewController;
+use App\Http\Controllers\CrewDocumentTypeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\ErpFileController;
@@ -49,12 +50,19 @@ Route::middleware('erpnext')->group(function () {
 Route::middleware(['erpnext', 'erpnext.company'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
+    // New certificate types, added from the crew form (Crew Certificate Type master).
+    // Document Types: the Crew Certificate Type master in ERP HPY.
+    Route::get('crew/document-types', [CrewDocumentTypeController::class, 'index'])->name('crew.document-types.index');
+    Route::post('crew/document-types', [CrewDocumentTypeController::class, 'store'])->name('crew.document-types.store');
+    Route::patch('crew/document-types/{type}', [CrewDocumentTypeController::class, 'update'])->name('crew.document-types.update')->where('type', '.*');
+    Route::post('crew/certificate-types', [CrewController::class, 'storeCertificateType'])->name('crew.certificate-types.store');
     Route::resource('crew', CrewController::class);
 
     // Candidate Pool — lifetime seafarer database, kept locally until promotion.
     Route::get('candidates/export', [CrewCandidateController::class, 'export'])->name('candidates.export');
     Route::get('candidates/duplicates', [CrewCandidateController::class, 'duplicates'])->name('candidates.duplicates');
     Route::post('candidates/bulk-status', [CrewCandidateController::class, 'bulkStatus'])->name('candidates.bulk-status');
+    Route::post('candidates/coc-types', [CrewCandidateController::class, 'storeCocType'])->name('candidates.coc-types.store');
     Route::post('candidates/{candidate}/promote', [CrewCandidateController::class, 'promote'])->name('candidates.promote');
     Route::resource('candidates', CrewCandidateController::class)->parameters(['candidates' => 'candidate']);
 
@@ -68,6 +76,7 @@ Route::middleware(['erpnext', 'erpnext.company'])->group(function () {
     Route::get('sign-off', [CrewAssignmentController::class, 'signOffDesk'])->name('assignments.sign-off');
     Route::post('assignments/{assignment}/sign-on', [CrewAssignmentController::class, 'signOn'])->name('assignments.do-sign-on');
     Route::post('assignments/{assignment}/sign-off', [CrewAssignmentController::class, 'signOff'])->name('assignments.do-sign-off');
+    Route::post('assignments/{assignment}/link', [CrewAssignmentController::class, 'link'])->name('assignments.link');
     Route::resource('assignments', CrewAssignmentController::class);
 
     // Principals — the owners whose vessels we crew.
@@ -75,6 +84,8 @@ Route::middleware(['erpnext', 'erpnext.company'])->group(function () {
     Route::resource('principals', PrincipalController::class);
 
     // Fleet, kept in the ERP HPY "Vessel" doctype.
+    Route::post('vessels/types', [VesselController::class, 'storeType'])->name('vessels.types.store');
+    Route::post('vessels/certificate-types', [VesselController::class, 'storeCertificateType'])->name('vessels.certificate-types.store');
     Route::resource('vessels', VesselController::class)->except('show');
     Route::get('vessels/{vessel}', [VesselController::class, 'show'])->name('vessels.show');
 

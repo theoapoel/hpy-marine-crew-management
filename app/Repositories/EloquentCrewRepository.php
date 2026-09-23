@@ -25,7 +25,28 @@ class EloquentCrewRepository implements CrewRepositoryInterface
             $query->where('status', $status);
         }
 
+        if ($rank = $filters['rank'] ?? null) {
+            $rank === self::RANK_NONE
+                ? $query->where(fn ($q) => $q->whereNull('rank')->orWhere('rank', ''))
+                : $query->where('rank', $rank);
+        }
+
         return $query->paginate($perPage)->withQueryString();
+    }
+
+    public function rankSummary(): array
+    {
+        $summary = [];
+
+        foreach (Crew::query()->get(['rank', 'status']) as $crew) {
+            $rank = $crew->rank ?: self::RANK_NONE;
+            $summary[$rank]['total'] = ($summary[$rank]['total'] ?? 0) + 1;
+            if ($crew->status) {
+                $summary[$rank][$crew->status] = ($summary[$rank][$crew->status] ?? 0) + 1;
+            }
+        }
+
+        return $summary;
     }
 
     public function find(int|string $id): Crew

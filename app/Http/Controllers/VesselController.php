@@ -6,6 +6,8 @@ use App\Models\CrewAssignment;
 use App\Models\Principal;
 use App\Services\Erpnext\ErpnextClient;
 use App\Services\Erpnext\ErpnextOptions;
+use App\Services\OnboardCrew;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Gate;
@@ -49,6 +51,7 @@ class VesselController extends Controller
     public function __construct(
         private readonly ErpnextClient $erpnext,
         private readonly ErpnextOptions $options,
+        private readonly OnboardCrew $crew,
     ) {
     }
 
@@ -73,11 +76,9 @@ class VesselController extends Controller
 
         $vessels = collect($this->erpnext->list('Vessel', self::LIST_FIELDS, $erpFilters, 200));
 
-        // How many crew each vessel currently carries, from our own assignments.
-        $onboard = CrewAssignment::ofCompany()->onboard()
-            ->selectRaw('vessel, count(*) as total')
-            ->groupBy('vessel')
-            ->pluck('total', 'vessel');
+        // How many crew each vessel currently carries — per ERP HPY (Crew Master) and
+        // our own assignments, each person once.
+        $onboard = $this->crew->all()->countBy('vessel');
 
         $planned = CrewAssignment::ofCompany()->planned()
             ->selectRaw('vessel, count(*) as total')
@@ -95,6 +96,53 @@ class VesselController extends Controller
             'filters' => $filters,
             'types' => $this->options->fieldOptions('Vessel', 'vessel_type'),
         ]);
+    }
+
+    /**
+     * Add a vessel type from the vessel form: a record of the ERP HPY "Vessel Type"
+     * master, offered in the dropdown straight after. Answers JSON for the form.
+     */
+    public function storeType(Request $request): JsonResponse
+    {
+        return $this->addToMaster($request, 'Vessel', 'vessel_type', 'type_name', 'Vessel types');
+    }
+
+    /** Add a vessel certificate type ("Vessel Certificate Type" master) from the certificates tab. */
+    public function storeCertificateType(Request $request): JsonResponse
+    {
+        return $this->addToMaster($request, 'Vessel Certificate', 'certificate_type', 'certificate_name', 'Vessel certificate types');
+    }
+
+    /**
+     * Create a record in the master a Link field points at, so it is offered in that
+     * dropdown straight after. Answers JSON for the "+ New" buttons.
+     */
+    private function addToMaster(Request $request, string $doctype, string $field, string $titleField, string $what): JsonResponse
+    {
+        Gate::authorize('vessels.create');
+
+        $name = trim((string) $request->validate(['name' => ['required', 'string', 'max:140']])['name']);
+        $master = $this->options->linkTarget($doctype, $field);
+
+        if (! $master) {
+            return response()->json([
+                'message' => "{$what} are still a fixed list in ERP HPY. Run php artisan erp:sync-vessel-types first.",
+            ], 409);
+        }
+
+        try {
+            if (! $this->erpnext->exists($master, $name)) {
+                $this->erpnext->create($master, [$titleField => $name, 'is_active' => 1]);
+            }
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            report($e);
+
+            return response()->json(['message' => 'ERP HPY rejected the type (status ' . $e->response->status() . ').'], 422);
+        }
+
+        $this->options->forget($master);
+
+        return response()->json(['name' => $name], 201);
     }
 
     public function create()
@@ -131,7 +179,7 @@ class VesselController extends Controller
             'certificates' => collect($document['certificates_table'] ?? [])->map(fn ($c) => (object) $c),
             'engines' => collect($document['engines_table'] ?? [])->map(fn ($e) => (object) $e),
             'manning' => collect($document['manning_table'] ?? [])->map(fn ($m) => (object) $m),
-            'crew' => CrewAssignment::ofCompany()->onboard()->where('vessel', $vessel)->orderBy('rank')->get(),
+            'crew' => $this->crew->onVessel($vessel),
             // Booked on this ship but not aboard yet — otherwise a fresh assignment
             // looks like it never happened.
             'planned' => CrewAssignment::ofCompany()->planned()->where('vessel', $vessel)
@@ -201,9 +249,11 @@ class VesselController extends Controller
     {
         return [
             'types' => $this->options->fieldOptions('Vessel', 'vessel_type'),
+            'typesEditable' => $this->options->linkTarget('Vessel', 'vessel_type') !== null,
             'societies' => $this->options->selectOptions('Vessel', 'classification_society'),
             'countries' => $this->options->countries(),
             'certificateTypes' => $this->options->fieldOptions('Vessel Certificate', 'certificate_type'),
+            'certificateTypesEditable' => $this->options->linkTarget('Vessel Certificate', 'certificate_type') !== null,
             'certificateStatuses' => $this->options->selectOptions('Vessel Certificate', 'status'),
             'company' => $this->erpnext->company(),
             'principals' => Principal::ofCompany()

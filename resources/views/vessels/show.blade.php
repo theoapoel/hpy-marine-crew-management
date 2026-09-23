@@ -195,15 +195,15 @@
           </tr>
         </thead>
         <tbody>
-          @forelse($crew as $assignment)
+          @forelse($crew as $member)
             <tr class="border-b border-line last:border-0">
               <td class="px-6 py-3">
-                <a href="{{ route('assignments.show', $assignment) }}" class="text-slate-900 font-medium hover:text-brand">{{ $assignment->crew_name }}</a>
+                <a href="{{ $member->href }}" class="text-slate-900 font-medium hover:text-brand">{{ $member->crew_name }}</a>
               </td>
-              <td class="px-3 py-3 text-slate-600">{{ $assignment->rank ?: '—' }}</td>
-              <td class="px-3 py-3 text-slate-600">{{ $assignment->sign_on_date?->format('d M Y') ?? '—' }}</td>
-              <td class="px-3 py-3 text-slate-600">{{ $assignment->planned_sign_off_date?->format('d M Y') ?? '—' }}</td>
-              <td class="px-3 py-3 text-slate-600">{{ $assignment->days_onboard ?? '—' }}</td>
+              <td class="px-3 py-3 text-slate-600">{{ $member->rank ?: '—' }}</td>
+              <td class="px-3 py-3 text-slate-600">{{ $member->sign_on_date?->format('d M Y') ?? '—' }}</td>
+              <td class="px-3 py-3 text-slate-600">{{ $member->contract_until?->format('d M Y') ?? '—' }}</td>
+              <td class="px-3 py-3 text-slate-600">{{ $member->days_onboard ?? '—' }}</td>
             </tr>
           @empty
             <tr><td colspan="5" class="px-6 py-10 text-center text-muted">No crew aboard this vessel.</td></tr>

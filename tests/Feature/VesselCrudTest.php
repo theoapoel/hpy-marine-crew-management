@@ -166,4 +166,43 @@ class VesselCrudTest extends TestCase
 
         $this->post('/vessels', $this->payload())->assertSessionHasErrors('erpnext');
     }
+
+    public function test_a_new_vessel_type_is_added_to_the_erp_master_from_the_form(): void
+    {
+        $this->fakeErp([
+            '*/api/resource/DocType/Vessel' => Http::response(['data' => ['fields' => [
+                ['fieldname' => 'vessel_type', 'fieldtype' => 'Link', 'options' => 'Vessel Type'],
+            ]]]),
+            '*/api/resource/Vessel%20Type' => Http::response(['data' => ['name' => 'Dredger']]),
+        ]);
+
+        $this->get('/vessels/create')->assertOk()
+            ->assertSee('data-type-new="vessel"', false)
+            ->assertSee('name="gross_tonnage"', false);
+
+        $this->postJson('/vessels/types', ['name' => 'Dredger'])->assertCreated()->assertJson(['name' => 'Dredger']);
+
+        Http::assertSent(fn ($r) => $r->method() === 'POST'
+            && str_ends_with(urldecode($r->url()), '/api/resource/Vessel Type')
+            && $r['type_name'] === 'Dredger');
+    }
+
+    public function test_a_new_vessel_certificate_type_is_added_to_the_erp_master_from_the_form(): void
+    {
+        $this->fakeErp([
+            '*/api/resource/DocType/Vessel%20Certificate' => Http::response(['data' => ['fields' => [
+                ['fieldname' => 'certificate_type', 'fieldtype' => 'Link', 'options' => 'Vessel Certificate Type'],
+            ]]]),
+            '*/api/resource/Vessel%20Certificate%20Type' => Http::response(['data' => ['name' => 'Polar Ship Certificate']]),
+        ]);
+
+        $this->get('/vessels/create')->assertOk()->assertSee('data-type-new="vcert"', false);
+
+        $this->postJson('/vessels/certificate-types', ['name' => 'Polar Ship Certificate'])
+            ->assertCreated()->assertJson(['name' => 'Polar Ship Certificate']);
+
+        Http::assertSent(fn ($r) => $r->method() === 'POST'
+            && str_ends_with(urldecode($r->url()), '/api/resource/Vessel Certificate Type')
+            && $r['certificate_name'] === 'Polar Ship Certificate');
+    }
 }

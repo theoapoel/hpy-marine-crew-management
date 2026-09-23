@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CrewApplication;
 use App\Models\CrewAssignment;
 use App\Models\CrewCandidate;
-use App\Repositories\CrewRepositoryInterface;
 use App\Services\Erpnext\ErpnextClient;
 use App\Services\Erpnext\ErpnextOptions;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
@@ -41,7 +42,11 @@ class CrewAssignmentController extends Controller
         ]);
     }
 
-    /** Sign On desk: everyone waiting to board. */
+    /**
+     * Sign On desk: everyone waiting to board — and, below them, who boarded in the
+     * last 30 days, so a crew signed on (here or from the assignment form) does not
+     * simply vanish from the page that is meant to show sign ons.
+     */
     public function signOnDesk(Request $request)
     {
         Gate::authorize('assignments.viewAny');
@@ -50,6 +55,11 @@ class CrewAssignmentController extends Controller
             'assignments' => $this->query($request->only('search', 'vessel'))
                 ->planned()
                 ->orderBy('planned_sign_on_date')
+                ->get(),
+            'recent' => $this->query($request->only('search', 'vessel'))
+                ->onboard()
+                ->where('sign_on_date', '>=', now()->subDays(30)->toDateString())
+                ->orderByDesc('sign_on_date')
                 ->get(),
             'filters' => $request->only('search', 'vessel'),
             'vessels' => $this->options->vessels(),
@@ -85,7 +95,7 @@ class CrewAssignmentController extends Controller
     {
         Gate::authorize('assignments.create');
 
-        $assignment = CrewAssignment::create($this->validated($request));
+        $assignment = CrewAssignment::create($this->prepared($this->validated($request)));
 
         return redirect()->route('assignments.show', $assignment)
             ->with('success', "{$assignment->assignment_code} dibuat.");
@@ -109,7 +119,7 @@ class CrewAssignmentController extends Controller
     {
         Gate::authorize('assignments.update');
 
-        $assignment->update($this->validated($request));
+        $assignment->update($this->prepared($this->validated($request), $assignment));
 
         return redirect()->route('assignments.show', $assignment)
             ->with('success', "{$assignment->assignment_code} diperbarui.");
@@ -138,6 +148,28 @@ class CrewAssignmentController extends Controller
         ]));
 
         return back()->with('success', "{$assignment->crew_name} sign on ke {$assignment->vessel}.");
+    }
+
+    /**
+     * Find the Employee, Candidate and Application of an assignment made without them,
+     * then mirror it onto ERP HPY — the way to repair postings that never reached
+     * Crew Master.
+     */
+    public function link(CrewAssignment $assignment)
+    {
+        Gate::authorize('assignments.update');
+
+        $found = $this->linkData($assignment->only(['crew_name', 'employee_id', 'crew_candidate_id', 'crew_application_id']));
+        $assignment->fill(array_filter($found, fn ($v) => filled($v)))->save();
+
+        if (blank($assignment->employee_id)) {
+            return back()->withErrors(['link' => "Tidak ada satu Employee di ERP HPY yang namanya persis \"{$assignment->crew_name}\". Pilih Employee-nya di form edit."]);
+        }
+
+        // Saving only syncs when a watched field changed; a repair must sync regardless.
+        $assignment->syncToErp();
+
+        return back()->with('success', "{$assignment->assignment_code} ditautkan ke {$assignment->employee_id}.");
     }
 
     public function signOff(Request $request, CrewAssignment $assignment)
@@ -175,12 +207,11 @@ class CrewAssignmentController extends Controller
     {
         return [
             'candidates' => CrewCandidate::ofCompany()->orderBy('full_name')->get(['id', 'full_name', 'candidate_code', 'linked_employee_id', 'applied_rank']),
-            'crews' => collect($this->erpnext->isConfigured()
-                ? app(CrewRepositoryInterface::class)->paginate([], 200)->items()
-                : [])->map(fn ($c) => ['id' => $c->id, 'name' => $c->name])->all(),
+            'crews' => $this->employees(),
             'vessels' => $this->options->vessels(),
             'ranks' => $this->options->ranks(),
             'statuses' => CrewAssignment::STATUSES,
+            'currencies' => rescue(fn () => $this->options->currencies(), [], report: true) ?: ['IDR', 'USD'],
         ];
     }
 
@@ -206,5 +237,111 @@ class CrewAssignmentController extends Controller
             'wage_currency' => ['nullable', 'string', 'max:5'],
             'notes' => ['nullable', 'string', 'max:5000'],
         ]);
+    }
+
+    /**
+     * Employees of the session company for the Employee dropdown: id, name and rank,
+     * so picking one can fill the rest of the form.
+     *
+     * @return array<int, array{id: string, name: string, rank: ?string}>
+     */
+    private function employees(): array
+    {
+        if (! $this->erpnext->isConfigured()) {
+            return [];
+        }
+
+        $filters = ($company = $this->erpnext->company()) ? [['company', '=', $company]] : [];
+
+        return rescue(fn () => collect($this->erpnext->list(
+            (string) config('services.erpnext.crew_doctype', 'Employee'),
+            ['name', 'employee_name', 'custom_rank'],
+            $filters,
+            2000,
+        ))->map(fn ($row) => [
+            'id' => (string) $row['name'],
+            'name' => (string) ($row['employee_name'] ?? $row['name']),
+            'rank' => $row['custom_rank'] ?? null,
+        ])->sortBy('name')->values()->all(), [], report: true);
+    }
+
+    /**
+     * What the form sends, completed the way the desks would complete it:
+     *
+     * - the links nobody filled in are found (see link());
+     * - a contract length gives the planned sign off, counted from the sign on (or
+     *   the planned sign on) — unless a date was typed in;
+     * - moving a planned crew to Onboard here is a sign on, so it gets a sign on date.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function prepared(array $data, ?CrewAssignment $assignment = null): array
+    {
+        // Keep an application already linked (a hire sets it); the form does not carry it.
+        $data['crew_application_id'] = $assignment?->crew_application_id;
+        $data = $this->linkData($data);
+
+        if (($data['status'] ?? null) === 'onboard' && blank($data['sign_on_date'] ?? null)) {
+            $data['sign_on_date'] = ($data['planned_sign_on_date'] ?? null) ?: now()->toDateString();
+        }
+
+        $start = ($data['sign_on_date'] ?? null) ?: ($data['planned_sign_on_date'] ?? null);
+        if (filled($data['contract_months'] ?? null) && $start && blank($data['planned_sign_off_date'] ?? null)) {
+            $data['planned_sign_off_date'] = CrewAssignment::contractEnd($start, (int) $data['contract_months']);
+        }
+
+        return $data;
+    }
+
+    /**
+     * Fill in the Employee, Candidate and Application an assignment belongs to when
+     * the form left them empty. Without the Employee nothing reaches ERP HPY — Crew
+     * Master would never hear of the posting — so it is looked for hardest:
+     *
+     * 1. the Employee the chosen candidate was promoted to;
+     * 2. the one Employee of this company whose name matches the crew name exactly;
+     * then the candidate behind that Employee (or with that exact name), and that
+     * candidate's application — the hired one, else the latest.
+     *
+     * A name matching several people is left alone rather than guessed.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function linkData(array $data): array
+    {
+        $name = trim((string) ($data['crew_name'] ?? ''));
+        $candidate = filled($data['crew_candidate_id'] ?? null) ? CrewCandidate::find($data['crew_candidate_id']) : null;
+
+        if (blank($data['employee_id'] ?? null)) {
+            $data['employee_id'] = $candidate?->linked_employee_id
+                ?: $this->onlyOne(collect($this->employees())->filter(fn ($e) => strcasecmp($e['name'], $name) === 0)->pluck('id'));
+        }
+
+        if (! $candidate) {
+            $candidate = filled($data['employee_id'] ?? null)
+                ? CrewCandidate::ofCompany()->where('linked_employee_id', $data['employee_id'])->first()
+                : null;
+            $candidate ??= $name !== ''
+                ? $this->onlyOne(CrewCandidate::ofCompany()->where('full_name', $name)->get())
+                : null;
+            $data['crew_candidate_id'] = $candidate?->id;
+        }
+
+        if ($candidate && blank($data['crew_application_id'] ?? null)) {
+            $data['crew_application_id'] = CrewApplication::where('crew_candidate_id', $candidate->id)
+                ->orderByRaw("case when stage = 'hired' then 0 else 1 end")
+                ->latest('id')
+                ->value('id');
+        }
+
+        return $data;
+    }
+
+    /** The single item of a collection, or null when there are none or several. */
+    private function onlyOne(\Illuminate\Support\Collection $items): mixed
+    {
+        return $items->count() === 1 ? $items->first() : null;
     }
 }

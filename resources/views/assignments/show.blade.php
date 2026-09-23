@@ -64,7 +64,31 @@
       'Hari di Kapal' => $assignment->days_onboard !== null ? $assignment->days_onboard . ' hari' : null,
       'Upah' => $assignment->wage ? $assignment->wage_currency . ' ' . number_format((float) $assignment->wage, 2) : null,
     ];
+    $links = ['Employee (ERP HPY)', 'Kandidat', 'Lamaran'];
+    $unlinked = blank($assignment->employee_id) || ! $assignment->candidate || ! $assignment->application;
   @endphp
+
+  @if($errors->any())
+    <div class="bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-xl px-4 py-3">{{ $errors->first() }}</div>
+  @endif
+
+  @if($unlinked)
+    <div class="flex flex-wrap items-center gap-3 bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl px-4 py-3">
+      <span class="flex-1 min-w-60">
+        @if(blank($assignment->employee_id))
+          Assignment ini belum ditautkan ke Employee di ERP HPY, jadi perubahannya tidak sampai ke Crew Master.
+        @else
+          Kandidat / lamaran belum ditautkan.
+        @endif
+      </span>
+      @can('assignments.update')
+        <form method="POST" action="{{ route('assignments.link', $assignment) }}">
+          @csrf
+          <button class="bg-white hover:bg-amber-100 border border-amber-300 text-amber-900 text-xs font-medium rounded-md px-3 py-1.5">Tautkan otomatis</button>
+        </form>
+      @endcan
+    </div>
+  @endif
 
   <div class="bg-panel border border-line rounded-xl p-6 shadow-sm">
     <h2 class="text-sm font-semibold text-slate-900 mb-4">Detail</h2>
@@ -73,8 +97,16 @@
         <div>
           <div class="text-[11px] uppercase tracking-wider text-muted">{{ $labelText }}</div>
           <div class="text-slate-800 mt-1 font-medium">
-            @if($labelText === 'Employee (ERP HPY)' && filled($value))
+            @if(in_array($labelText, $links, true) && blank($value))
+              <span class="text-amber-700 font-normal">Belum ditautkan</span>
+            @elseif($labelText === 'Employee (ERP HPY)')
               <a href="{{ route('crew.show', $value) }}" class="text-brand hover:underline">{{ $value }}</a>
+            @elseif($labelText === 'Kandidat')
+              <a href="{{ route('candidates.show', $assignment->candidate) }}" class="text-brand hover:underline">{{ $value }}</a>
+              <span class="text-muted font-normal">· {{ $assignment->candidate->full_name }}</span>
+            @elseif($labelText === 'Lamaran')
+              <a href="{{ route('applications.show', $assignment->application) }}" class="text-brand hover:underline">{{ $value }}</a>
+              <span class="text-muted font-normal">· {{ ucfirst($assignment->application->stage) }}</span>
             @elseif($labelText === 'Kapal' && filled($value))
               <a href="{{ route('vessels.show', $value) }}" class="text-brand hover:underline">{{ $value }}</a>
             @else

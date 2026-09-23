@@ -47,11 +47,17 @@
       <label class="{{ $label }}">Vessel Name *</label>
       <input type="text" name="vessel_name" required value="{{ $val('vessel_name') }}" class="{{ $input }}">
     </div>
-    <div class="md:col-span-3 min-w-0">
-      <label class="{{ $label }}">Vessel Type *</label>
-      <select name="vessel_type" required class="{{ $input }}">
+    <div class="md:col-span-3 min-w-0" data-type-anchor="vessel">
+      <div class="flex items-baseline justify-between gap-2">
+        <label class="{{ $label }}">Vessel Type *</label>
+        @if($typesEditable ?? false)
+          <button type="button" data-type-new="vessel" data-type-label="vessel type" data-url="{{ route('vessels.types.store') }}"
+                  class="text-[11px] text-brand hover:text-brand-d font-medium mb-1">+ New</button>
+        @endif
+      </div>
+      <select name="vessel_type" required data-type-select="vessel" class="{{ $input }}">
         <option value="">—</option>
-        @foreach($types as $type)<option value="{{ $type }}" @selected($val('vessel_type') === $type)>{{ $type }}</option>@endforeach
+        @foreach(collect($types)->push($val('vessel_type'))->filter()->unique() as $type)<option value="{{ $type }}" @selected($val('vessel_type') === $type)>{{ $type }}</option>@endforeach
       </select>
     </div>
     <div class="md:col-span-3 min-w-0">
@@ -188,20 +194,38 @@
 
 <div data-tab-panel="dimensions-and-tonnage" class="space-y-5">
 <div class="bg-panel border border-line rounded-xl p-6 shadow-sm">
-  <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+  <div class="space-y-8">
     @foreach([
-      'length_overall' => 'LOA (m)', 'length_bp' => 'LBP (m)', 'breadth' => 'Breadth (m)',
-      'depth_moulded' => 'Depth Moulded (m)', 'draft_summer' => 'Summer Draft (m)',
-      'draft_ballast' => 'Ballast Draft (m)', 'freeboard' => 'Freeboard (m)',
-      'gross_tonnage' => 'Gross Tonnage', 'net_tonnage' => 'Net Tonnage',
-      'deadweight' => 'Deadweight', 'displacement' => 'Displacement (MT)',
-      'cargo_capacity' => 'Cargo Capacity (m³)', 'fuel_capacity' => 'Fuel (MT)',
-      'fresh_water_capacity' => 'Fresh Water (MT)', 'ballast_capacity' => 'Ballast (MT)',
-      'service_speed' => 'Service Speed (kn)', 'max_speed' => 'Max Speed (kn)',
-    ] as $field => $heading)
-      <div>
-        <label class="{{ $label }}">{{ $heading }}</label>
-        <input type="number" step="0.01" min="0" name="{{ $field }}" value="{{ $val($field) }}" class="{{ $input }}">
+      'Dimensions' => [
+        'length_overall' => ['LOA', 'm'], 'length_bp' => ['LBP', 'm'], 'breadth' => ['Breadth', 'm'],
+        'depth_moulded' => ['Depth Moulded', 'm'], 'draft_summer' => ['Summer Draft', 'm'],
+        'draft_ballast' => ['Ballast Draft', 'm'], 'freeboard' => ['Freeboard', 'm'],
+      ],
+      'Tonnage' => [
+        'gross_tonnage' => ['Gross Tonnage', 'GT'], 'net_tonnage' => ['Net Tonnage', 'NT'],
+        'deadweight' => ['Deadweight', 'MT'], 'displacement' => ['Displacement', 'MT'],
+      ],
+      'Capacity' => [
+        'cargo_capacity' => ['Cargo Capacity', 'm³'], 'fuel_capacity' => ['Fuel', 'MT'],
+        'fresh_water_capacity' => ['Fresh Water', 'MT'], 'ballast_capacity' => ['Ballast', 'MT'],
+      ],
+      'Speed' => [
+        'service_speed' => ['Service Speed', 'kn'], 'max_speed' => ['Max Speed', 'kn'],
+      ],
+    ] as $section => $fields)
+      <div class="{{ $loop->first ? '' : 'pt-6 border-t border-line' }}">
+        <h3 class="text-sm font-semibold text-slate-900 mb-4">{{ $section }}</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+          @foreach($fields as $field => [$heading, $unit])
+            <div class="min-w-0">
+              <label class="{{ $label }} truncate" title="{{ $heading }} ({{ $unit }})">{{ $heading }}</label>
+              <div class="relative">
+                <input type="number" step="0.01" min="0" name="{{ $field }}" value="{{ $val($field) }}" class="{{ $input }} pr-12 tabular-nums">
+                <span class="absolute inset-y-0 right-3 flex items-center text-xs text-muted pointer-events-none">{{ $unit }}</span>
+              </div>
+            </div>
+          @endforeach
+        </div>
       </div>
     @endforeach
   </div>
@@ -210,7 +234,11 @@
 
 <div data-tab-panel="vessel-certificates" class="space-y-5">
 <div class="bg-panel border border-line rounded-xl p-6 shadow-sm space-y-4">
-  <div class="flex items-center justify-end">
+  <div class="flex items-center justify-end gap-4" data-type-anchor="vcert">
+    @if($certificateTypesEditable ?? false)
+      <button type="button" data-type-new="vcert" data-type-label="certificate type" data-url="{{ route('vessels.certificate-types.store') }}"
+              class="text-xs text-slate-600 hover:text-slate-900 font-medium">+ New type</button>
+    @endif
     <button type="button" id="add-certificate" class="text-xs text-brand hover:text-brand-d font-medium">+ Add row</button>
   </div>
 
@@ -225,9 +253,9 @@
         <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
         <div class="md:col-span-4 min-w-0">
           <label class="{{ $label }}">Type</label>
-          <select name="certificates[{{ $i }}][certificate_type]" class="{{ $input }}">
+          <select name="certificates[{{ $i }}][certificate_type]" data-type-select="vcert" class="{{ $input }}">
             <option value="">—</option>
-            @foreach($certificateTypes as $type)
+            @foreach(collect($certificateTypes)->push($row['certificate_type'] ?? null)->filter()->unique() as $type)
               <option value="{{ $type }}" @selected(($row['certificate_type'] ?? '') === $type)>{{ $type }}</option>
             @endforeach
           </select>

@@ -57,15 +57,7 @@ class ErpnextOptions
      */
     public function fieldOptions(string $doctype, string $fieldname): array
     {
-        $field = Cache::remember("erpnext_field:{$doctype}:{$fieldname}", self::TTL, function () use ($doctype, $fieldname) {
-            $definition = collect($this->client->get('DocType', $doctype)['fields'] ?? [])
-                ->firstWhere('fieldname', $fieldname);
-
-            return [
-                'fieldtype' => $definition['fieldtype'] ?? null,
-                'options' => $definition['options'] ?? null,
-            ];
-        });
+        $field = $this->definition($doctype, $fieldname);
 
         if ($field['fieldtype'] === 'Link' && filled($field['options'])) {
             return $this->names($field['options']);
@@ -76,6 +68,43 @@ class ErpnextOptions
             ->filter()
             ->values()
             ->all();
+    }
+
+    /**
+     * The master doctype a Link field points at, or null while it is still a Select —
+     * i.e. whether new choices can be added as records rather than by editing a doctype.
+     */
+    public function linkTarget(string $doctype, string $fieldname): ?string
+    {
+        $field = $this->definition($doctype, $fieldname);
+
+        return $field['fieldtype'] === 'Link' && filled($field['options']) ? $field['options'] : null;
+    }
+
+    /** Drop the cached records of a doctype, after one was added from the app. */
+    public function forget(string $doctype): void
+    {
+        Cache::forget($this->namesKey($doctype, null, []));
+    }
+
+    /** Currencies enabled in ERP HPY. */
+    public function currencies(): array
+    {
+        return $this->names('Currency', null, [['enabled', '=', 1]]);
+    }
+
+    /** @return array{fieldtype: ?string, options: ?string} */
+    private function definition(string $doctype, string $fieldname): array
+    {
+        return Cache::remember("erpnext_field:{$doctype}:{$fieldname}", self::TTL, function () use ($doctype, $fieldname) {
+            $definition = collect($this->client->get('DocType', $doctype)['fields'] ?? [])
+                ->firstWhere('fieldname', $fieldname);
+
+            return [
+                'fieldtype' => $definition['fieldtype'] ?? null,
+                'options' => $definition['options'] ?? null,
+            ];
+        });
     }
 
     /**
@@ -121,11 +150,15 @@ class ErpnextOptions
      */
     private function names(string $doctype, ?string $orderBy = null, array $filters = []): array
     {
-        $key = 'erpnext_options:' . $doctype . ':' . md5(json_encode([$orderBy, $filters, $this->client->company()]));
-
-        return Cache::remember($key, self::TTL, function () use ($doctype, $filters) {
+        return Cache::remember($this->namesKey($doctype, $orderBy, $filters), self::TTL, function () use ($doctype, $filters) {
             return array_column($this->client->list($doctype, ['name'], $filters, 500), 'name');
         });
+    }
+
+    /** @param array<int, array<int, mixed>> $filters */
+    private function namesKey(string $doctype, ?string $orderBy, array $filters): string
+    {
+        return 'erpnext_options:' . $doctype . ':' . md5(json_encode([$orderBy, $filters, $this->client->company()]));
     }
 
     /** @return array<int, array<int, string>> */

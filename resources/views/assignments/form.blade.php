@@ -22,7 +22,7 @@
 @endif
 
 {{-- Actions ride along at the top of the form --}}
-<div class="sticky top-0 z-20 -mx-6 px-6 py-3 bg-canvas/95 backdrop-blur border-b border-line flex items-center gap-3">
+<div class="sticky top-16 z-10 -mx-4 lg:-mx-8 px-4 lg:px-8 py-3 bg-canvas/95 backdrop-blur border-b border-line flex items-center gap-3">
   <button class="bg-brand hover:bg-brand-d text-white text-sm font-medium rounded-md px-5 py-2 shadow-sm">{{ $submitLabel }}</button>
   <a href="{{ route('assignments.index') }}" class="text-sm text-muted hover:text-slate-900 px-3 py-2">Cancel</a>
 </div>
@@ -45,11 +45,12 @@
     </div>
 
     <div class="md:col-span-3 min-w-0">
-      <label class="{{ $label }}">Kandidat (opsional)</label>
-      <select name="crew_candidate_id" class="{{ $input }}">
-        <option value="">—</option>
+      <label class="{{ $label }}">Kandidat</label>
+      <select name="crew_candidate_id" data-fill class="{{ $input }}">
+        <option value="">— Otomatis dari nama —</option>
         @foreach($candidates as $candidate)
-          <option value="{{ $candidate->id }}" @selected((string) $val('crew_candidate_id') === (string) $candidate->id)>
+          <option value="{{ $candidate->id }}" data-name="{{ $candidate->full_name }}" data-employee="{{ $candidate->linked_employee_id }}" data-rank="{{ $candidate->applied_rank }}"
+                  @selected((string) $val('crew_candidate_id') === (string) $candidate->id)>
             {{ $candidate->candidate_code }} — {{ $candidate->full_name }}
           </option>
         @endforeach
@@ -57,12 +58,24 @@
     </div>
 
     <div class="md:col-span-3 min-w-0">
-      <label class="{{ $label }}">Employee ID (ERP HPY)</label>
-      <input type="text" name="employee_id" value="{{ $val('employee_id') }}" placeholder="HR-EMP-00001" class="{{ $input }}" list="employee-ids">
-      <datalist id="employee-ids">
-        @foreach($crews as $crew)<option value="{{ $crew['id'] }}">{{ $crew['name'] }}</option>@endforeach
-      </datalist>
+      <label class="{{ $label }}">Employee (ERP HPY)</label>
+      @php $employeeId = (string) $val('employee_id'); @endphp
+      <select name="employee_id" data-fill class="{{ $input }}">
+        <option value="">— Otomatis dari nama —</option>
+        @if($employeeId !== '' && ! collect($crews)->contains('id', $employeeId))
+          <option value="{{ $employeeId }}" selected>{{ $employeeId }}</option>
+        @endif
+        @foreach($crews as $crew)
+          <option value="{{ $crew['id'] }}" data-name="{{ $crew['name'] }}" data-rank="{{ $crew['rank'] }}" @selected($employeeId === $crew['id'])>
+            {{ $crew['name'] }} — {{ $crew['id'] }}
+          </option>
+        @endforeach
+      </select>
     </div>
+
+    <p class="md:col-span-12 -mt-2 text-[11px] text-muted">
+      Kosongkan Kandidat / Employee untuk ditautkan otomatis dari nama saat disimpan. Tanpa Employee, perubahan tidak sampai ke Crew Master di ERP HPY.
+    </p>
 
     <div class="md:col-span-3 min-w-0">
       <label class="{{ $label }}">Kapal</label>
@@ -89,22 +102,31 @@
 
     <div class="md:col-span-3 min-w-0">
       <label class="{{ $label }}">Upah</label>
-      <input type="number" step="0.01" name="wage" value="{{ $val('wage') }}" class="{{ $input }}">
+      <div class="flex">
+        <select name="wage_currency" aria-label="Mata uang upah"
+                class="bg-slate-50 border border-line border-r-0 rounded-l-md py-2 pl-2 pr-7 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand">
+          @foreach(collect($currencies)->push($val('wage_currency', 'IDR'))->unique() as $currency)
+            <option value="{{ $currency }}" @selected($val('wage_currency', 'IDR') === $currency)>{{ $currency }}</option>
+          @endforeach
+        </select>
+        <input type="number" step="0.01" min="0" name="wage" value="{{ $val('wage') }}" inputmode="decimal"
+               class="{{ $input }} rounded-l-none tabular-nums min-w-0">
+      </div>
     </div>
   </div>
 </div>
 </div>
 
 <div data-tab-panel="sign-on-sign-off" class="space-y-5">
-<div class="bg-panel border border-line rounded-xl p-6 shadow-sm">
+<div class="bg-panel border border-line rounded-xl p-6 shadow-sm" data-contract>
   <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
     <div class="md:col-span-3 min-w-0">
       <label class="{{ $label }}">Rencana Sign On</label>
-      <input type="date" name="planned_sign_on_date" value="{{ $val('planned_sign_on_date') }}" class="{{ $input }}">
+      <input type="date" name="planned_sign_on_date" data-contract-planned value="{{ $val('planned_sign_on_date') }}" class="{{ $input }}">
     </div>
     <div class="md:col-span-3 min-w-0">
       <label class="{{ $label }}">Sign On</label>
-      <input type="date" name="sign_on_date" value="{{ $val('sign_on_date') }}" class="{{ $input }}">
+      <input type="date" name="sign_on_date" data-contract-start value="{{ $val('sign_on_date') }}" class="{{ $input }}">
     </div>
     <div class="md:col-span-3 min-w-0">
       <label class="{{ $label }}">Pelabuhan Sign On</label>
@@ -112,11 +134,12 @@
     </div>
     <div class="md:col-span-3 min-w-0">
       <label class="{{ $label }}">Kontrak (bulan)</label>
-      <input type="number" name="contract_months" min="1" max="36" value="{{ $val('contract_months') }}" class="{{ $input }}">
+      <input type="number" name="contract_months" data-contract-months min="1" max="36" value="{{ $val('contract_months') }}" class="{{ $input }}">
     </div>
     <div class="md:col-span-3 min-w-0">
       <label class="{{ $label }}">Rencana Sign Off</label>
-      <input type="date" name="planned_sign_off_date" value="{{ $val('planned_sign_off_date') }}" class="{{ $input }}">
+      <input type="date" name="planned_sign_off_date" data-contract-end value="{{ $val('planned_sign_off_date') }}" class="{{ $input }}">
+      <p data-contract-hint class="text-[11px] text-muted mt-1" aria-live="polite"></p>
     </div>
     <div class="md:col-span-3 min-w-0">
       <label class="{{ $label }}">Sign Off</label>

@@ -88,4 +88,35 @@ class ErpnextCrewRepositoryTest extends TestCase
 
         $this->assertSame('Budi Santoso', $page->items()[0]->name);
     }
+
+    public function test_the_rank_filter_narrows_the_list_to_one_rank(): void
+    {
+        Http::fake(['*/api/resource/Employee*' => Http::response(['data' => []])]);
+
+        $this->repository()->paginate(['rank' => 'Able Seaman']);
+        $this->repository()->paginate(['rank' => 'Unspecified']);
+
+        Http::assertSent(fn ($request) => str_contains(urldecode($request->url()), '["custom_rank","=","Able Seaman"]'));
+        Http::assertSent(fn ($request) => str_contains(urldecode($request->url()), '["custom_rank","is","not set"]'));
+    }
+
+    public function test_rank_summary_counts_every_crew_per_rank_and_status(): void
+    {
+        Http::fake(['*/api/resource/Employee*' => Http::response(['data' => [
+            ['custom_rank' => 'Able Seaman', 'custom_crew_status' => 'Onboard'],
+            ['custom_rank' => 'Able Seaman', 'custom_crew_status' => 'Onboard'],
+            ['custom_rank' => 'Able Seaman', 'custom_crew_status' => 'Standby'],
+            ['custom_rank' => 'Oiler', 'custom_crew_status' => 'Sign Off'],
+            ['custom_rank' => null, 'custom_crew_status' => 'Standby'],
+        ]])]);
+
+        $summary = $this->repository()->rankSummary();
+
+        $this->assertSame(['total' => 3, 'Onboard' => 2, 'Standby' => 1], $summary['Able Seaman']);
+        $this->assertSame(['total' => 1, 'Sign Off' => 1], $summary['Oiler']);
+        $this->assertSame(['total' => 1, 'Standby' => 1], $summary['Unspecified']);
+
+        // Scoped like the list: only the session company.
+        Http::assertSent(fn ($request) => str_contains(urldecode($request->url()), '["company","=","Keenindo Bintas Marine"]'));
+    }
 }

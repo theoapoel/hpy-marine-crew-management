@@ -2,17 +2,24 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\ManagesErpDoctypes;
 use App\Models\CrewCandidate;
 use App\Services\Erpnext\ErpnextClient;
+use App\Support\CocTypes;
 use Illuminate\Console\Command;
 
 /**
  * Mirrors the Candidate Pool as a custom Doctype in ERP HPY (module HR), so crewing
  * staff can also see and edit candidates inside ERP HPY itself. Additive and
  * idempotent — safe to run again after adding fields here.
+ *
+ * COC types are master data ("COC Type"), seeded from the list the app shipped with;
+ * Crew Candidate.coc_type links to it, so new ones are added as records.
  */
 class SyncCandidateDoctype extends Command
 {
+    use ManagesErpDoctypes;
+
     protected $signature = 'erp:sync-candidate-doctype';
 
     protected $description = 'Create the "Crew Candidate" custom Doctype (module HR) in ERP HPY';
@@ -23,6 +30,8 @@ class SyncCandidateDoctype extends Command
 
     public function handle(ErpnextClient $client): int
     {
+        $this->ensureCocTypes($client);
+
         $this->ensure($client, self::COP_DOCTYPE, [
             'istable' => 1,
             'fields' => [
@@ -42,7 +51,34 @@ class SyncCandidateDoctype extends Command
             ],
         ]);
 
+        // An instance set up before the master existed still has a Select here.
+        $this->repoint($client, self::DOCTYPE, 'coc_type', CocTypes::DOCTYPE);
+
         return self::SUCCESS;
+    }
+
+    /** The master behind the COC dropdown, seeded with the old fixed list. */
+    private function ensureCocTypes(ErpnextClient $client): void
+    {
+        $this->ensureDoctype($client, CocTypes::DOCTYPE, 'coc_type_name', [
+            ['fieldname' => 'coc_type_name', 'label' => 'COC Type', 'fieldtype' => 'Data', 'reqd' => 1, 'unique' => 1, 'in_list_view' => 1],
+            ['fieldname' => 'department', 'label' => 'Department', 'fieldtype' => 'Select', 'in_list_view' => 1,
+                'options' => "\nDeck\nEngine\nRating\nOther"],
+            ['fieldname' => 'is_active', 'label' => 'Active', 'fieldtype' => 'Check', 'default' => '1'],
+            ['fieldname' => 'description', 'label' => 'Description', 'fieldtype' => 'Small Text'],
+        ], usersMayAdd: true);
+
+        $rows = [];
+        foreach (CrewCandidate::COC_TYPES as $type) {
+            $rows[$type] = ['coc_type_name' => $type, 'is_active' => 1, 'department' => match (true) {
+                str_starts_with($type, 'ANT') => 'Deck',
+                str_starts_with($type, 'ATT') => 'Engine',
+                $type === 'Rating' => 'Rating',
+                default => 'Other',
+            }];
+        }
+
+        $this->seed($client, CocTypes::DOCTYPE, $rows);
     }
 
     /** @param array<string, mixed> $definition */
@@ -122,7 +158,7 @@ class SyncCandidateDoctype extends Command
             ['fieldname' => 'last_sign_off_date', 'label' => 'Last Sign Off', 'fieldtype' => 'Date'],
 
             ['fieldname' => 'sec_certification', 'label' => 'Certification', 'fieldtype' => 'Section Break'],
-            ['fieldname' => 'coc_type', 'label' => 'COC Type', 'fieldtype' => 'Select', 'options' => $select(CrewCandidate::COC_TYPES), 'in_list_view' => 1],
+            ['fieldname' => 'coc_type', 'label' => 'COC Type', 'fieldtype' => 'Link', 'options' => CocTypes::DOCTYPE, 'in_list_view' => 1],
             ['fieldname' => 'coc_number', 'label' => 'COC Number', 'fieldtype' => 'Data'],
             ['fieldname' => 'coc_expiry', 'label' => 'COC Expiry', 'fieldtype' => 'Date'],
             ['fieldname' => 'cb_certification', 'fieldtype' => 'Column Break'],

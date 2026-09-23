@@ -24,6 +24,10 @@ class SyncPrincipalDoctype extends Command
 
     private const CHILD_DOCTYPE = 'Principal Contact Person';
 
+    private const ADDRESS_DOCTYPE = 'Principal Address';
+
+    private const FEE_DOCTYPE = 'Principal Manning Fee';
+
     /**
      * Custom doctypes in this instance live in HR — every marine doctype they already
      * had (Vessel, Rank, Vessel Certificate) sits there, and a separate module would
@@ -34,6 +38,8 @@ class SyncPrincipalDoctype extends Command
     public function handle(ErpnextClient $client): int
     {
         $this->writeJson('doctypes/principal_contact_person.json', $this->childDefinition());
+        $this->writeJson('doctypes/principal_address.json', $this->addressDefinition());
+        $this->writeJson('doctypes/principal_manning_fee.json', $this->feeDefinition());
         $this->writeJson('doctypes/principal.json', $this->definition());
         $this->writeJson('custom_fields/vessel_principal_field.json', $this->vesselField());
 
@@ -41,8 +47,14 @@ class SyncPrincipalDoctype extends Command
             return self::SUCCESS;
         }
 
-        $this->ensure($client, self::CHILD_DOCTYPE, $this->childDefinition());
-        $this->ensure($client, self::DOCTYPE, $this->definition());
+        foreach ([
+            self::CHILD_DOCTYPE => $this->childDefinition(),
+            self::ADDRESS_DOCTYPE => $this->addressDefinition(),
+            self::FEE_DOCTYPE => $this->feeDefinition(),
+            self::DOCTYPE => $this->definition(),
+        ] as $doctype => $definition) {
+            $this->ensure($client, $doctype, $definition);
+        }
         $this->ensureVesselField($client);
 
         return self::SUCCESS;
@@ -63,13 +75,44 @@ class SyncPrincipalDoctype extends Command
     private function ensure(ErpnextClient $client, string $doctype, array $definition): void
     {
         if ($client->exists('DocType', $doctype)) {
-            $this->line("= {$doctype} (already there)");
+            $this->addMissingFields($client, $doctype, $definition['fields']);
 
             return;
         }
 
         $client->create('DocType', $definition);
         $this->info("+ {$doctype}");
+    }
+
+    /**
+     * A doctype created by an older run lacks the fields added since (address and fee
+     * tables, WeChat). Each goes in after the field it follows in the definition.
+     *
+     * @param  array<int, array<string, mixed>>  $wanted
+     */
+    private function addMissingFields(ErpnextClient $client, string $doctype, array $wanted): void
+    {
+        $fields = $client->get('DocType', $doctype)['fields'] ?? [];
+        $added = [];
+
+        foreach ($wanted as $i => $field) {
+            if (collect($fields)->contains('fieldname', $field['fieldname'])) {
+                continue;
+            }
+
+            $after = $i > 0 ? collect($fields)->search(fn ($f) => $f['fieldname'] === $wanted[$i - 1]['fieldname']) : -1;
+            array_splice($fields, $after === false ? count($fields) : $after + 1, 0, [$field]);
+            $added[] = $field['fieldname'];
+        }
+
+        if ($added === []) {
+            $this->line("= {$doctype} (already there)");
+
+            return;
+        }
+
+        $client->update('DocType', $doctype, ['fields' => $fields]);
+        $this->info("~ {$doctype}: + " . implode(', ', $added));
     }
 
     private function ensureVesselField(ErpnextClient $client): void
@@ -142,8 +185,10 @@ class SyncPrincipalDoctype extends Command
                 ['fieldname' => 'cb_contact', 'fieldtype' => 'Column Break'],
                 ['fieldname' => 'phone', 'label' => 'Phone', 'fieldtype' => 'Data'],
                 ['fieldname' => 'fax', 'label' => 'Fax', 'fieldtype' => 'Data'],
+                ['fieldname' => 'wechat', 'label' => 'WeChat', 'fieldtype' => 'Data'],
                 ['fieldname' => 'email', 'label' => 'Email', 'fieldtype' => 'Data', 'options' => 'Email'],
                 ['fieldname' => 'website', 'label' => 'Website', 'fieldtype' => 'Data'],
+                ['fieldname' => 'addresses', 'label' => 'Addresses', 'fieldtype' => 'Table', 'options' => self::ADDRESS_DOCTYPE],
 
                 ['fieldname' => 'sb_terms', 'label' => 'Business Terms', 'fieldtype' => 'Section Break'],
                 ['fieldname' => 'contract_start_date', 'label' => 'Contract Start Date', 'fieldtype' => 'Date'],
@@ -156,6 +201,7 @@ class SyncPrincipalDoctype extends Command
                 ['fieldname' => 'manning_fee_amount', 'label' => 'Manning Fee Amount', 'fieldtype' => 'Currency', 'options' => 'currency'],
                 ['fieldname' => 'currency', 'label' => 'Currency', 'fieldtype' => 'Link', 'options' => 'Currency', 'default' => 'IDR'],
                 ['fieldname' => 'payment_terms', 'label' => 'Payment Terms', 'fieldtype' => 'Data'],
+                ['fieldname' => 'manning_fees', 'label' => 'Manning Fees', 'fieldtype' => 'Table', 'options' => self::FEE_DOCTYPE],
 
                 ['fieldname' => 'sb_compliance', 'label' => 'Compliance', 'fieldtype' => 'Section Break'],
                 ['fieldname' => 'p_and_i_club', 'label' => 'P&I Club', 'fieldtype' => 'Data'],
@@ -205,9 +251,59 @@ class SyncPrincipalDoctype extends Command
                 ['fieldname' => 'email', 'label' => 'Email', 'fieldtype' => 'Data', 'options' => 'Email'],
                 ['fieldname' => 'phone', 'label' => 'Phone', 'fieldtype' => 'Data', 'in_list_view' => 1],
                 ['fieldname' => 'whatsapp', 'label' => 'WhatsApp', 'fieldtype' => 'Data'],
+                ['fieldname' => 'wechat', 'label' => 'WeChat', 'fieldtype' => 'Data'],
                 ['fieldname' => 'is_primary', 'label' => 'Primary', 'fieldtype' => 'Check', 'in_list_view' => 1],
                 ['fieldname' => 'notes', 'label' => 'Notes', 'fieldtype' => 'Small Text'],
             ],
+            'permissions' => [],
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function addressDefinition(): array
+    {
+        return $this->childTable(self::ADDRESS_DOCTYPE, [
+            ['fieldname' => 'address_type', 'label' => 'Type', 'fieldtype' => 'Select', 'in_list_view' => 1,
+                'options' => implode("\n", \App\Models\Principal::ADDRESS_TYPES)],
+            ['fieldname' => 'address', 'label' => 'Address', 'fieldtype' => 'Small Text', 'in_list_view' => 1],
+            ['fieldname' => 'city', 'label' => 'City', 'fieldtype' => 'Data', 'in_list_view' => 1],
+            ['fieldname' => 'province', 'label' => 'Province', 'fieldtype' => 'Data'],
+            ['fieldname' => 'postal_code', 'label' => 'Postal Code', 'fieldtype' => 'Data'],
+            ['fieldname' => 'country', 'label' => 'Country', 'fieldtype' => 'Data'],
+            ['fieldname' => 'phone', 'label' => 'Phone', 'fieldtype' => 'Data', 'in_list_view' => 1],
+            ['fieldname' => 'fax', 'label' => 'Fax', 'fieldtype' => 'Data'],
+            ['fieldname' => 'email', 'label' => 'Email', 'fieldtype' => 'Data', 'options' => 'Email'],
+            ['fieldname' => 'wechat', 'label' => 'WeChat', 'fieldtype' => 'Data'],
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function feeDefinition(): array
+    {
+        return $this->childTable(self::FEE_DOCTYPE, [
+            ['fieldname' => 'fee_type', 'label' => 'Manning Fee Type', 'fieldtype' => 'Select', 'in_list_view' => 1,
+                'options' => "\nPer Crew\nPercentage\nFlat Monthly"],
+            ['fieldname' => 'amount', 'label' => 'Amount', 'fieldtype' => 'Currency', 'options' => 'currency', 'in_list_view' => 1],
+            ['fieldname' => 'currency', 'label' => 'Currency', 'fieldtype' => 'Link', 'options' => 'Currency', 'in_list_view' => 1],
+            ['fieldname' => 'description', 'label' => 'Description', 'fieldtype' => 'Data', 'in_list_view' => 1],
+        ]);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $fields
+     * @return array<string, mixed>
+     */
+    private function childTable(string $name, array $fields): array
+    {
+        return [
+            'doctype' => 'DocType',
+            'name' => $name,
+            'module' => self::MODULE,
+            'custom' => 1,
+            'istable' => 1,
+            'editable_grid' => 1,
+            'engine' => 'InnoDB',
+            'fields' => $fields,
             'permissions' => [],
         ];
     }

@@ -6,6 +6,7 @@ use App\Http\Requests\PrincipalRequest;
 use App\Models\Principal;
 use App\Services\Erpnext\ErpnextOptions;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
@@ -145,13 +146,45 @@ class PrincipalController extends Controller
             'contractTypes' => Principal::CONTRACT_TYPES,
             'feeTypes' => Principal::FEE_TYPES,
             'countries' => $this->options->countries(),
+            'addressTypes' => Principal::ADDRESS_TYPES,
+            'currencies' => $this->options->currencies(),
         ];
     }
 
     /** @return array<string, mixed> */
     private function payload(PrincipalRequest $request): array
     {
-        return collect($request->validated())->except('contact_persons')->all();
+        $data = collect($request->validated())->except('contact_persons')->all();
+
+        $rows = fn (string $key, array $fields) => collect($data[$key] ?? [])
+            ->map(fn ($row) => array_filter(array_intersect_key((array) $row, array_flip($fields)), 'filled'));
+
+        // A row is kept when it says something beyond its type (or currency).
+        $addresses = $rows('addresses', Principal::ADDRESS_FIELDS)
+            ->filter(fn ($row) => Arr::except($row, ['address_type', 'country']) !== [])->values()->all();
+        $fees = $rows('manning_fees', Principal::FEE_FIELDS)
+            ->filter(fn ($row) => isset($row['fee_type']) || isset($row['amount']))->values()->all();
+
+        // The first row of each stays on the single columns: search, the list and
+        // ERP HPY's flat fields read those.
+        $address = $addresses[0] ?? [];
+        $fee = $fees[0] ?? [];
+
+        return array_merge($data, [
+            'addresses' => $addresses ?: null,
+            'manning_fees' => $fees ?: null,
+            'head_office_address' => $address['address'] ?? null,
+            'city' => $address['city'] ?? null,
+            'province' => $address['province'] ?? null,
+            'postal_code' => $address['postal_code'] ?? null,
+            'phone' => $address['phone'] ?? null,
+            'fax' => $address['fax'] ?? null,
+            'email' => $address['email'] ?? null,
+            'wechat' => $address['wechat'] ?? null,
+            'manning_fee_type' => $fee['fee_type'] ?? null,
+            'manning_fee_amount' => $fee['amount'] ?? null,
+            'currency' => $fee['currency'] ?? 'IDR',
+        ]);
     }
 
     /** Replace the contact rows with what the form carried, dropping blank ones. */
@@ -170,6 +203,7 @@ class PrincipalController extends Controller
                 'email' => $row['email'] ?? null,
                 'phone' => $row['phone'] ?? null,
                 'whatsapp' => $row['whatsapp'] ?? null,
+                'wechat' => $row['wechat'] ?? null,
                 // Exactly one primary: the marked row, or the first one.
                 'is_primary' => (bool) ($row['is_primary'] ?? false) || ($index === 0 && $rows->where('is_primary', '1')->isEmpty()),
                 'notes' => $row['notes'] ?? null,

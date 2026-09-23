@@ -81,7 +81,7 @@
 
   @php
     $groups = [
-      'Personal' => [
+      'Personal Info' => [
         'Gender' => $text($candidate->gender),
         'Tanggal Lahir' => $fmt($candidate->date_of_birth),
         'Tempat Lahir' => $candidate->place_of_birth,
@@ -89,17 +89,10 @@
         'Status Pernikahan' => $text($candidate->marital_status),
         'Agama' => $candidate->religion,
         'Golongan Darah' => $candidate->blood_type,
-      ],
-      'Identity' => [
         'NIK' => $candidate->nik,
         'Passport No.' => $candidate->passport_no,
         'Passport Expiry' => $fmt($candidate->passport_expiry),
         'Passport Issue Place' => $candidate->passport_issue_place,
-        'Seaman Book No.' => $candidate->seaman_book_no,
-        'Seaman Book Expiry' => $fmt($candidate->seaman_book_expiry),
-        'Seaman Book Issue Place' => $candidate->seaman_book_issue_place,
-      ],
-      'Contact' => [
         'Telepon' => $candidate->phone,
         'WhatsApp' => $candidate->whatsapp,
         'Email' => $candidate->email,
@@ -117,6 +110,9 @@
         'Last Sign Off' => $fmt($candidate->last_sign_off_date),
       ],
       'Certification' => [
+        'Seaman Book No.' => $candidate->seaman_book_no,
+        'Seaman Book Expiry' => $fmt($candidate->seaman_book_expiry),
+        'Seaman Book Issue Place' => $candidate->seaman_book_issue_place,
         'COC Type' => $candidate->coc_type,
         'COC Number' => $candidate->coc_number,
         'COC Expiry' => $fmt($candidate->coc_expiry),

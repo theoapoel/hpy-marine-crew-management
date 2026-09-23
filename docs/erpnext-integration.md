@@ -15,7 +15,7 @@ marine doctypes (Vessel, Rank, Vessel Certificate). Each command is idempotent.
 
 | Command | Creates |
 | --- | --- |
-| `php artisan erp:sync-crew-fields` | `Employee Certificate` child table + the marine custom fields on `Employee` |
+| `php artisan erp:sync-crew-fields` | `Crew Certificate Type` master (seeded; `Employee Certificate.certificate_type` links to it), `Employee Certificate` + `Employee Bank Account` child tables, and the marine custom fields on `Employee` (incl. last salary) |
 | `php artisan erp:sync-ranks` | Seafarer ranks in the `Rank` doctype |
 | `php artisan erp:sync-candidate-doctype` | `Crew Candidate` + `Crew Candidate COP` |
 | `php artisan erp:sync-vessel-types` | `Vessel Type` + `Vessel Certificate Type`, and re-points the fields at them |
@@ -23,6 +23,16 @@ marine doctypes (Vessel, Rank, Vessel Certificate). Each command is idempotent.
 | `php artisan erp:sync-project-fields` | `Project.vessel` — the link Vessel Profitability reads through |
 
 Sample data: `erp:seed-vessels`, `erp:seed-crew-documents`, `erp:seed-vessel-profitability`.
+
+## Crew Master
+
+Passport and seaman book are rows of the certificate table (types `Passport` and
+`Seaman Book`) — that is what the Documents menu reads. On save the app copies them
+onto the standard Employee fields (`passport_number`, `valid_upto`, …,
+`custom_seaman_book_no`) so anything reading those keeps working. Bank accounts are
+rows of `custom_bank_accounts`; the first is also written to `bank_name` /
+`bank_ac_no`, where payroll looks. Certificate types are records of
+`Crew Certificate Type`, added in ERP HPY or with "+ New type" on the crew form.
 
 ## Vessel Profitability
 

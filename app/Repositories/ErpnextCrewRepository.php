@@ -7,6 +7,7 @@ use App\Services\Erpnext\ErpnextClient;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator as Paginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Request;
 
 /**
@@ -41,8 +42,13 @@ class ErpnextCrewRepository implements CrewRepositoryInterface
         'seaman_book_expiry' => 'custom_seaman_book_expiry',
         'vessel' => 'custom_vessel',
         'sign_on_date' => 'custom_sign_on_date',
+        'last_salary' => 'custom_last_salary',
+        'last_salary_currency' => 'custom_last_salary_currency',
         // contract_end_date is a standard Employee field, see PLAIN_FIELDS.
     ];
+
+    /** Bank account columns the form edits, one row per account. */
+    private const BANK_FIELDS = ['bank_name', 'account_holder', 'account_number', 'bank_address'];
 
     /** Columns the crew list needs; a full document is fetched for the detail views. */
     private const LIST_FIELDS = [
@@ -78,6 +84,9 @@ class ErpnextCrewRepository implements CrewRepositoryInterface
         if ($search = trim((string) ($filters['search'] ?? ''))) {
             $erpFilters[] = ['employee_name', 'like', "%{$search}%"];
         }
+        if ($rank = $filters['rank'] ?? null) {
+            $erpFilters[] = $rank === self::RANK_NONE ? ['custom_rank', 'is', 'not set'] : ['custom_rank', '=', $rank];
+        }
 
         $page = max(1, (int) Request::query('page', 1));
         $start = ($page - 1) * $perPage;
@@ -92,6 +101,31 @@ class ErpnextCrewRepository implements CrewRepositoryInterface
             'path' => Paginator::resolveCurrentPath(),
             'query' => Request::query(),
         ]);
+    }
+
+    public function rankSummary(): array
+    {
+        $filters = [];
+
+        if ($company = $this->client->company()) {
+            $filters[] = ['company', '=', $company];
+        }
+
+        $summary = [];
+
+        foreach ($this->client->list($this->doctype(), ['custom_rank', 'custom_crew_status'], $filters, 5000) as $row) {
+            // Keyed by custom_rank alone, like the rank filter, so a card's count and
+            // the list it opens always agree.
+            $rank = ($row['custom_rank'] ?? null) ?: self::RANK_NONE;
+            $status = $row['custom_crew_status'] ?? null;
+
+            $summary[$rank]['total'] = ($summary[$rank]['total'] ?? 0) + 1;
+            if ($status) {
+                $summary[$rank][$status] = ($summary[$rank][$status] ?? 0) + 1;
+            }
+        }
+
+        return $summary;
     }
 
     public function find(int|string $id): Crew
@@ -246,11 +280,58 @@ class ErpnextCrewRepository implements CrewRepositoryInterface
         $crew->forceFill($attributes);
         $crew->exists = true;
 
-        $crew->certificates = collect($row['custom_certificates'] ?? [])
+        $crew->certificates = $this->withIdentityDocuments(collect($row['custom_certificates'] ?? []), $row)
             ->map(fn ($c) => (object) $c)
             ->all();
 
+        $accounts = collect($row['custom_bank_accounts'] ?? [])
+            ->map(fn ($a) => array_intersect_key($a, array_flip(self::BANK_FIELDS)));
+
+        // Records from before the bank table: their single account lives on Employee.
+        if ($accounts->isEmpty() && (filled($row['bank_name'] ?? null) || filled($row['bank_ac_no'] ?? null))) {
+            $accounts->push(['bank_name' => $row['bank_name'] ?? null, 'account_number' => $row['bank_ac_no'] ?? null]);
+        }
+
+        $crew->bank_accounts = $accounts->map(fn ($a) => (object) $a)->all();
+
         return $crew;
+    }
+
+    /**
+     * Passport and seaman book are certificate rows now. A record saved before that
+     * only has them in the Employee fields; show those as rows, so the certificate
+     * table is the one place to read and edit them — saving turns them into real rows.
+     *
+     * @param  Collection<int, array<string, mixed>>  $rows
+     * @param  array<string, mixed>  $employee
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function withIdentityDocuments(Collection $rows, array $employee): Collection
+    {
+        $types = $rows->pluck('certificate_type')->all();
+        $identity = [];
+
+        if (! in_array('Passport', $types, true) && filled($employee['passport_number'] ?? null)) {
+            $identity[] = array_filter([
+                'certificate_type' => 'Passport',
+                'certificate_number' => $employee['passport_number'],
+                'issued_by' => $employee['place_of_issue'] ?? null,
+                'issue_date' => $employee['date_of_issue'] ?? null,
+                'expiry_date' => $employee['valid_upto'] ?? null,
+                'status' => $this->certificateStatus($employee['valid_upto'] ?? null),
+            ]);
+        }
+
+        if (! in_array('Seaman Book', $types, true) && filled($employee['custom_seaman_book_no'] ?? null)) {
+            $identity[] = array_filter([
+                'certificate_type' => 'Seaman Book',
+                'certificate_number' => $employee['custom_seaman_book_no'],
+                'expiry_date' => $employee['custom_seaman_book_expiry'] ?? null,
+                'status' => $this->certificateStatus($employee['custom_seaman_book_expiry'] ?? null),
+            ]);
+        }
+
+        return collect($identity)->concat($rows)->values();
     }
 
     /**
@@ -305,6 +386,19 @@ class ErpnextCrewRepository implements CrewRepositoryInterface
             if (array_key_exists($app, $data)) {
                 $payload[$erp] = $data[$app];
             }
+        }
+
+        // Bank accounts: the whole table, and the first account on the standard
+        // Employee fields too, which is where payroll looks.
+        if (array_key_exists('bank_accounts', $data)) {
+            $accounts = collect((array) $data['bank_accounts'])
+                ->map(fn ($a) => array_filter(array_intersect_key((array) $a, array_flip(self::BANK_FIELDS)), fn ($v) => filled($v)))
+                ->filter(fn ($a) => filled($a['bank_name'] ?? null) || filled($a['account_number'] ?? null))
+                ->values();
+
+            $payload['custom_bank_accounts'] = $accounts->all();
+            $payload['bank_name'] = $accounts->first()['bank_name'] ?? '';
+            $payload['bank_ac_no'] = $accounts->first()['account_number'] ?? '';
         }
 
         // Only nulls are dropped: an empty string is how a field gets cleared

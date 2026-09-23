@@ -89,7 +89,11 @@
               <td class="px-3 py-3"><span class="chip border {{ $colors[$doc->status] ?? '' }}">{{ $doc->status }}</span></td>
               <td class="px-5 py-3 text-right">
                 @if($doc->attachment)
-                  <a href="{{ $file($doc->attachment) }}" target="_blank" rel="noopener" class="text-brand hover:text-brand-d font-medium">Download</a>
+                  <button type="button" data-preview="{{ $file($doc->attachment) }}"
+                          data-preview-title="{{ $doc->certificate_type }} — {{ $doc->crew_name ?? basename($doc->attachment) }}"
+                          class="text-brand hover:text-brand-d font-medium">Preview</button>
+                  <span class="text-line mx-1">|</span>
+                  <a href="{{ $file($doc->attachment) }}" download class="text-slate-600 hover:text-slate-900">Download</a>
                 @else
                   <span class="text-muted">—</span>
                 @endif

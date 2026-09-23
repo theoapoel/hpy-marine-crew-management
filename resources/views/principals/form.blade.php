@@ -14,6 +14,10 @@
 
   $contacts = old('contact_persons', ($principal?->contactPersons ?? collect())->map(fn ($c) => $c->toArray())->all());
   $contacts[] = [];
+
+  $addresses = old('addresses', $principal?->addressRows() ?? []) ?: [['address_type' => 'Head Office']];
+  $fees = old('manning_fees', $principal?->feeRows() ?? []) ?: [['currency' => 'IDR']];
+  $currencyList = collect($currencies)->merge(collect($fees)->pluck('currency'))->push('IDR')->filter()->unique()->values();
 @endphp
 
 @if($errors->any())
@@ -25,7 +29,7 @@
 @endif
 
 {{-- Actions ride along at the top of the form --}}
-<div class="sticky top-0 z-20 -mx-6 px-6 py-3 bg-canvas/95 backdrop-blur border-b border-line flex items-center gap-3">
+<div class="sticky top-16 z-10 -mx-4 lg:-mx-8 px-4 lg:px-8 py-3 bg-canvas/95 backdrop-blur border-b border-line flex items-center gap-3">
   <button name="after_save" value="close" class="bg-brand hover:bg-brand-d text-white text-sm font-medium rounded-md px-5 py-2 shadow-sm">Save &amp; Close</button>
   <button name="after_save" value="new" class="bg-white hover:bg-slate-50 border border-line text-slate-700 text-sm font-medium rounded-md px-5 py-2">Save &amp; New</button>
   <a href="{{ route('principals.index') }}" class="text-sm text-muted hover:text-slate-900 px-3 py-2">Cancel</a>
@@ -75,36 +79,68 @@
 </div>
 
 <div data-tab-panel="address-and-contact" class="space-y-5">
-<div class="bg-panel border border-line rounded-xl p-6 shadow-sm">
-  <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
-    <div class="md:col-span-12 min-w-0">
-      <label class="{{ $label }}">Head Office Address</label>
-      <textarea name="head_office_address" rows="2" class="{{ $input }}">{{ $val('head_office_address') }}</textarea>
-    </div>
-    <div class="md:col-span-3 min-w-0">
-      <label class="{{ $label }}">City</label>
-      <input type="text" name="city" value="{{ $val('city') }}" class="{{ $input }}">
-    </div>
-    <div class="md:col-span-3 min-w-0">
-      <label class="{{ $label }}">Province</label>
-      <input type="text" name="province" value="{{ $val('province') }}" class="{{ $input }}">
-    </div>
-    <div class="md:col-span-3 min-w-0">
-      <label class="{{ $label }}">Postal Code</label>
-      <input type="text" name="postal_code" value="{{ $val('postal_code') }}" class="{{ $input }}">
-    </div>
-    <div class="md:col-span-3 min-w-0">
-      <label class="{{ $label }}">Phone</label>
-      <input type="text" name="phone" value="{{ $val('phone') }}" class="{{ $input }}">
-    </div>
-    <div class="md:col-span-3 min-w-0">
-      <label class="{{ $label }}">Fax</label>
-      <input type="text" name="fax" value="{{ $val('fax') }}" class="{{ $input }}">
-    </div>
-    <div class="md:col-span-3 min-w-0">
-      <label class="{{ $label }}">Email</label>
-      <input type="email" name="email" value="{{ $val('email') }}" class="{{ $input }}">
-    </div>
+<div class="bg-panel border border-line rounded-xl p-6 shadow-sm space-y-4" data-repeater="addresses">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <p class="text-[11px] text-muted">Satu baris per kantor. Baris pertama dipakai sebagai alamat utama.</p>
+    <button type="button" data-repeater-add class="text-xs text-brand hover:text-brand-d font-medium">+ Add address</button>
+  </div>
+
+  <div data-repeater-rows class="space-y-3">
+    @foreach($addresses as $i => $address)
+      <div data-repeater-row class="border border-line rounded-lg p-4">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-[11px] uppercase tracking-wider text-muted font-semibold">Address</span>
+          <button type="button" data-repeater-remove class="text-xs text-rose-500 hover:text-rose-600">Remove</button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+          <div class="md:col-span-3 min-w-0">
+            <label class="{{ $label }}">Type</label>
+            <select name="addresses[{{ $i }}][address_type]" class="{{ $input }}">
+              @foreach($addressTypes as $type)<option value="{{ $type }}" @selected(($address['address_type'] ?? 'Head Office') === $type)>{{ $type }}</option>@endforeach
+            </select>
+          </div>
+          <div class="md:col-span-9 min-w-0">
+            <label class="{{ $label }}">Address</label>
+            <textarea name="addresses[{{ $i }}][address]" rows="2" class="{{ $input }}">{{ $address['address'] ?? '' }}</textarea>
+          </div>
+          <div class="md:col-span-3 min-w-0">
+            <label class="{{ $label }}">City</label>
+            <input type="text" name="addresses[{{ $i }}][city]" value="{{ $address['city'] ?? '' }}" class="{{ $input }}">
+          </div>
+          <div class="md:col-span-3 min-w-0">
+            <label class="{{ $label }}">Province</label>
+            <input type="text" name="addresses[{{ $i }}][province]" value="{{ $address['province'] ?? '' }}" class="{{ $input }}">
+          </div>
+          <div class="md:col-span-3 min-w-0">
+            <label class="{{ $label }}">Postal Code</label>
+            <input type="text" name="addresses[{{ $i }}][postal_code]" value="{{ $address['postal_code'] ?? '' }}" class="{{ $input }}">
+          </div>
+          <div class="md:col-span-3 min-w-0">
+            <label class="{{ $label }}">Country</label>
+            <input type="text" name="addresses[{{ $i }}][country]" value="{{ $address['country'] ?? '' }}" class="{{ $input }}" list="country-list">
+          </div>
+          <div class="md:col-span-3 min-w-0">
+            <label class="{{ $label }}">Phone</label>
+            <input type="text" name="addresses[{{ $i }}][phone]" value="{{ $address['phone'] ?? '' }}" class="{{ $input }}">
+          </div>
+          <div class="md:col-span-3 min-w-0">
+            <label class="{{ $label }}">Fax</label>
+            <input type="text" name="addresses[{{ $i }}][fax]" value="{{ $address['fax'] ?? '' }}" class="{{ $input }}">
+          </div>
+          <div class="md:col-span-3 min-w-0">
+            <label class="{{ $label }}">Email</label>
+            <input type="email" name="addresses[{{ $i }}][email]" value="{{ $address['email'] ?? '' }}" class="{{ $input }}">
+          </div>
+          <div class="md:col-span-3 min-w-0">
+            <label class="{{ $label }}">WeChat</label>
+            <input type="text" name="addresses[{{ $i }}][wechat]" value="{{ $address['wechat'] ?? '' }}" class="{{ $input }}">
+          </div>
+        </div>
+      </div>
+    @endforeach
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-4 pt-2">
     <div class="md:col-span-6 min-w-0">
       <label class="{{ $label }}">Website</label>
       <input type="text" name="website" value="{{ $val('website') }}" class="{{ $input }}">
@@ -135,21 +171,44 @@
       <label class="{{ $label }}">Payment Terms</label>
       <input type="text" name="payment_terms" value="{{ $val('payment_terms') }}" placeholder="NET 30" class="{{ $input }}">
     </div>
-    <div class="md:col-span-3 min-w-0">
-      <label class="{{ $label }}">Manning Fee Type</label>
-      <select name="manning_fee_type" class="{{ $input }}">
-        <option value="">—</option>
-        @foreach($feeTypes as $type)<option value="{{ $type }}" @selected($val('manning_fee_type') === $type)>{{ $text($type) }}</option>@endforeach
-      </select>
-    </div>
-    <div class="md:col-span-3 min-w-0">
-      <label class="{{ $label }}">Manning Fee Amount</label>
-      <input type="number" step="0.01" min="0" name="manning_fee_amount" value="{{ $val('manning_fee_amount') }}" class="{{ $input }}">
-    </div>
-    <div class="md:col-span-3 min-w-0">
-      <label class="{{ $label }}">Currency</label>
-      <input type="text" name="currency" value="{{ $val('currency', 'IDR') }}" class="{{ $input }}">
-    </div>
+  </div>
+</div>
+
+<div class="bg-panel border border-line rounded-xl p-6 shadow-sm space-y-4" data-repeater="manning_fees">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h3 class="text-sm font-semibold text-slate-900">Manning Fee</h3>
+    <button type="button" data-repeater-add class="text-xs text-brand hover:text-brand-d font-medium">+ Add fee</button>
+  </div>
+
+  <div data-repeater-rows class="space-y-3">
+    @foreach($fees as $i => $fee)
+      <div data-repeater-row class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end border border-line rounded-lg p-4">
+        <div class="md:col-span-3 min-w-0">
+          <label class="{{ $label }}">Manning Fee Type</label>
+          <select name="manning_fees[{{ $i }}][fee_type]" class="{{ $input }}">
+            <option value="">—</option>
+            @foreach($feeTypes as $type)<option value="{{ $type }}" @selected(($fee['fee_type'] ?? null) === $type)>{{ $text($type) }}</option>@endforeach
+          </select>
+        </div>
+        <div class="md:col-span-3 min-w-0">
+          <label class="{{ $label }}">Amount</label>
+          <input type="number" step="0.01" min="0" name="manning_fees[{{ $i }}][amount]" value="{{ $fee['amount'] ?? '' }}" class="{{ $input }} tabular-nums">
+        </div>
+        <div class="md:col-span-2 min-w-0">
+          <label class="{{ $label }}">Currency</label>
+          <select name="manning_fees[{{ $i }}][currency]" class="{{ $input }}">
+            @foreach($currencyList as $currency)<option value="{{ $currency }}" @selected(($fee['currency'] ?? 'IDR') === $currency)>{{ $currency }}</option>@endforeach
+          </select>
+        </div>
+        <div class="md:col-span-3 min-w-0">
+          <label class="{{ $label }}">Description</label>
+          <input type="text" name="manning_fees[{{ $i }}][description]" value="{{ $fee['description'] ?? '' }}" placeholder="Officers, ratings…" class="{{ $input }}">
+        </div>
+        <div class="md:col-span-1 min-w-0 text-right pb-2">
+          <button type="button" data-repeater-remove class="text-xs text-rose-500 hover:text-rose-600">Remove</button>
+        </div>
+      </div>
+    @endforeach
   </div>
 </div>
 </div>
@@ -217,12 +276,16 @@
           <label class="{{ $label }}">WhatsApp</label>
           <input type="text" name="contact_persons[{{ $i }}][whatsapp]" value="{{ $contact['whatsapp'] ?? '' }}" class="{{ $input }}">
         </div>
+        <div class="md:col-span-4 min-w-0">
+          <label class="{{ $label }}">WeChat</label>
+          <input type="text" name="contact_persons[{{ $i }}][wechat]" value="{{ $contact['wechat'] ?? '' }}" class="{{ $input }}">
+        </div>
         <div class="md:col-span-4 min-w-0 flex items-center gap-2 pt-5">
           <input type="hidden" name="contact_persons[{{ $i }}][is_primary]" value="0">
           <input type="checkbox" name="contact_persons[{{ $i }}][is_primary]" value="1" @checked(!empty($contact['is_primary'])) class="primary-flag">
           <span class="text-xs text-slate-700">Primary</span>
         </div>
-        <div class="md:col-span-8 min-w-0">
+        <div class="md:col-span-12 min-w-0">
           <label class="{{ $label }}">Notes</label>
           <input type="text" name="contact_persons[{{ $i }}][notes]" value="{{ $contact['notes'] ?? '' }}" class="{{ $input }}">
         </div>

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\CrewCandidate;
+use App\Support\CocTypes;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -69,7 +70,12 @@ class CrewCandidateRequest extends FormRequest
             'last_sign_off_date' => ['nullable', 'date'],
 
             // Certification
-            'coc_type' => ['nullable', Rule::in(CrewCandidate::COC_TYPES)],
+            // Types come from the ERP HPY "COC Type" master; a value stored before a type
+            // was retired stays valid on its own record.
+            'coc_type' => ['nullable', 'string', 'max:140', Rule::in(array_filter([
+                ...app(CocTypes::class)->all(),
+                $this->route('candidate')?->coc_type,
+            ]))],
             'coc_number' => ['nullable', 'string', 'max:100'],
             'coc_expiry' => ['nullable', 'date'],
             'cop_certificates' => ['nullable', 'array'],

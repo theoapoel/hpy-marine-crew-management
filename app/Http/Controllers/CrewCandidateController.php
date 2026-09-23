@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CrewCandidateRequest;
 use App\Models\CrewCandidate;
+use App\Services\Erpnext\ErpnextClient;
 use App\Services\Erpnext\ErpnextOptions;
+use App\Support\CocTypes;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Gate;
@@ -69,7 +72,7 @@ class CrewCandidateController extends Controller
             'ranks' => $this->options->ranks(),
             'statuses' => CrewCandidate::STATUSES,
             'sources' => CrewCandidate::SOURCES,
-            'cocTypes' => CrewCandidate::COC_TYPES,
+            'cocTypes' => app(CocTypes::class)->all(),
         ]);
     }
 
@@ -235,13 +238,45 @@ class CrewCandidateController extends Controller
             ->with('success', "{$candidate->candidate_code} dipromosikan menjadi Employee {$employee->id}.");
     }
 
+    /**
+     * Add a COC type from the candidate form: a record of the ERP HPY "COC Type"
+     * master, offered in every COC dropdown straight after. Answers JSON for the form.
+     */
+    public function storeCocType(Request $request, CocTypes $types, ErpnextClient $erpnext): JsonResponse
+    {
+        Gate::authorize('candidates.create');
+
+        $name = trim((string) $request->validate(['name' => ['required', 'string', 'max:140']])['name']);
+
+        if (! $types->editable()) {
+            return response()->json([
+                'message' => 'COC types are still a fixed list in ERP HPY. Run php artisan erp:sync-candidate-doctype first.',
+            ], 409);
+        }
+
+        try {
+            if (! $erpnext->exists(CocTypes::DOCTYPE, $name)) {
+                $erpnext->create(CocTypes::DOCTYPE, ['coc_type_name' => $name, 'is_active' => 1]);
+            }
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            report($e);
+
+            return response()->json(['message' => 'ERP HPY rejected the type (status ' . $e->response->status() . ').'], 422);
+        }
+
+        $this->options->forget(CocTypes::DOCTYPE);
+
+        return response()->json(['name' => $name], 201);
+    }
+
     private function formOptions(): array
     {
         return [
             'ranks' => $this->options->ranks(),
             'genders' => CrewCandidate::GENDERS,
             'maritalStatuses' => CrewCandidate::MARITAL_STATUSES,
-            'cocTypes' => CrewCandidate::COC_TYPES,
+            'cocTypes' => app(CocTypes::class)->all(),
+            'cocTypesEditable' => app(CocTypes::class)->editable(),
             'sources' => CrewCandidate::SOURCES,
             'statuses' => CrewCandidate::STATUSES,
             'paidSources' => CrewCandidate::PAID_SOURCES,

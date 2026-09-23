@@ -18,8 +18,6 @@
   // Sections are collapsible; the first one starts open.
   $sections = [
     'personal' => 'Personal Info',
-    'identity' => 'Identity',
-    'contact' => 'Contact',
     'professional' => 'Professional',
     'certification' => 'Certification',
     'source' => 'Source & Status',
@@ -36,7 +34,7 @@
 @endif
 
 {{-- Actions ride along at the top of the form --}}
-<div class="sticky top-0 z-20 -mx-6 px-6 py-3 bg-canvas/95 backdrop-blur border-b border-line flex items-center gap-3">
+<div class="sticky top-16 z-10 -mx-4 lg:-mx-8 px-4 lg:px-8 py-3 bg-canvas/95 backdrop-blur border-b border-line flex items-center gap-3">
   <button name="after_save" value="close" class="bg-brand hover:bg-brand-d text-white text-sm font-medium rounded-md px-5 py-2 shadow-sm">Save &amp; Close</button>
   <button name="after_save" value="new" class="bg-white hover:bg-slate-50 border border-line text-slate-700 text-sm font-medium rounded-md px-5 py-2">Save &amp; New</button>
   <a href="{{ route('candidates.index') }}" class="text-sm text-muted hover:text-slate-900 px-3 py-2">Cancel</a>
@@ -61,6 +59,7 @@
     <div class="px-6 py-6">
 
       @if($key === 'personal')
+        <h3 class="text-sm font-semibold text-slate-900 mb-4">Data Pribadi</h3>
         <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
           <div class="md:col-span-6 min-w-0">
             <label class="{{ $label }}">Nama Lengkap *</label>
@@ -103,23 +102,12 @@
         </div>
       @endif
 
-      @if($key === 'identity')
+      @if($key === 'personal')
+        <div class="mt-8 pt-6 border-t border-line"><h3 class="text-sm font-semibold text-slate-900 mb-4">Identitas</h3></div>
         <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
           <div class="md:col-span-3 min-w-0">
             <label class="{{ $label }}">NIK (KTP)</label>
             <input type="text" name="nik" id="nik" inputmode="numeric" maxlength="16" value="{{ $val('nik') }}" class="{{ $input }}">
-          </div>
-          <div class="md:col-span-3 min-w-0">
-            <label class="{{ $label }}">Seaman Book No.</label>
-            <input type="text" name="seaman_book_no" id="seaman_book_no" value="{{ $val('seaman_book_no') }}" class="{{ $input }}">
-          </div>
-          <div class="md:col-span-3 min-w-0">
-            <label class="{{ $label }}">Seaman Book Expiry</label>
-            <input type="date" name="seaman_book_expiry" value="{{ $val('seaman_book_expiry') }}" class="{{ $input }}">
-          </div>
-          <div class="md:col-span-3 min-w-0">
-            <label class="{{ $label }}">Seaman Book Issue Place</label>
-            <input type="text" name="seaman_book_issue_place" value="{{ $val('seaman_book_issue_place') }}" class="{{ $input }}">
           </div>
           <div class="md:col-span-3 min-w-0">
             <label class="{{ $label }}">Passport No.</label>
@@ -136,7 +124,8 @@
         </div>
       @endif
 
-      @if($key === 'contact')
+      @if($key === 'personal')
+        <div class="mt-8 pt-6 border-t border-line"><h3 class="text-sm font-semibold text-slate-900 mb-4">Kontak</h3></div>
         <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
           <div class="md:col-span-3 min-w-0">
             <label class="{{ $label }}">Telepon *</label>
@@ -214,11 +203,34 @@
       @endif
 
       @if($key === 'certification')
+        <h3 class="text-sm font-semibold text-slate-900 mb-4">Seaman Book</h3>
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+          <div class="md:col-span-3 min-w-0">
+            <label class="{{ $label }}">Seaman Book No.</label>
+            <input type="text" name="seaman_book_no" id="seaman_book_no" value="{{ $val('seaman_book_no') }}" class="{{ $input }}">
+          </div>
+          <div class="md:col-span-3 min-w-0">
+            <label class="{{ $label }}">Seaman Book Expiry</label>
+            <input type="date" name="seaman_book_expiry" value="{{ $val('seaman_book_expiry') }}" class="{{ $input }}">
+          </div>
+          <div class="md:col-span-3 min-w-0">
+            <label class="{{ $label }}">Seaman Book Issue Place</label>
+            <input type="text" name="seaman_book_issue_place" value="{{ $val('seaman_book_issue_place') }}" class="{{ $input }}">
+          </div>
+        </div>
+
+        <div class="mt-8 pt-6 border-t border-line flex items-center justify-between gap-3 mb-4" data-type-anchor="coc">
+          <h3 class="text-sm font-semibold text-slate-900">COC &amp; Medical</h3>
+          @if($cocTypesEditable)
+            <button type="button" data-type-new="coc" data-url="{{ route('candidates.coc-types.store') }}" data-type-label="COC type"
+                    class="text-xs text-slate-600 hover:text-slate-900 font-medium">+ New COC type</button>
+          @endif
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
           <div class="md:col-span-3 min-w-0">
             <label class="{{ $label }}">COC Type</label>
-            <select name="coc_type" class="{{ $input }}">
-              @foreach($cocTypes as $c)<option value="{{ $c }}" @selected($val('coc_type', 'None') === $c)>{{ $c }}</option>@endforeach
+            <select name="coc_type" data-type-select="coc" class="{{ $input }}">
+              @foreach(collect($cocTypes)->push($val('coc_type'))->filter()->unique() as $c)<option value="{{ $c }}" @selected($val('coc_type', 'None') === $c)>{{ $c }}</option>@endforeach
             </select>
           </div>
           <div class="md:col-span-3 min-w-0">
@@ -247,9 +259,9 @@
           <div id="cop-rows" class="space-y-2">
             @foreach($cops as $i => $cop)
               <div class="cop-row grid grid-cols-1 md:grid-cols-12 gap-2">
-                <input type="text" name="cop_certificates[{{ $i }}][name]" value="{{ $cop['name'] ?? '' }}" placeholder="Nama sertifikat (BST, AFF, ...)" class="{{ $input }}">
-                <input type="text" name="cop_certificates[{{ $i }}][number]" value="{{ $cop['number'] ?? '' }}" placeholder="Nomor" class="{{ $input }}">
-                <input type="date" name="cop_certificates[{{ $i }}][expiry]" value="{{ $cop['expiry'] ?? '' }}" class="{{ $input }}">
+                <input type="text" name="cop_certificates[{{ $i }}][name]" value="{{ $cop['name'] ?? '' }}" placeholder="Nama sertifikat (BST, AFF, ...)" class="{{ $input }} md:col-span-6">
+                <input type="text" name="cop_certificates[{{ $i }}][number]" value="{{ $cop['number'] ?? '' }}" placeholder="Nomor" class="{{ $input }} md:col-span-3">
+                <input type="date" name="cop_certificates[{{ $i }}][expiry]" value="{{ $cop['expiry'] ?? '' }}" aria-label="Expiry" class="{{ $input }} md:col-span-3">
               </div>
             @endforeach
           </div>
@@ -312,33 +324,35 @@
       @endif
 
       @if($key === 'attachments')
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
-          <div class="md:col-span-4 min-w-0">
+        @php $fileInput = $input . ' py-1.5 file:mr-3 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-xs'; @endphp
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          <div class="min-w-0">
             <label class="{{ $label }}">Foto</label>
             <div class="flex items-center gap-3">
               <img id="photo-preview" src="{{ $candidate?->photo_path ? Storage::url($candidate->photo_path) : '' }}"
                    class="w-12 h-12 rounded-lg object-cover border border-line shrink-0 {{ $candidate?->photo_path ? '' : 'hidden' }}" alt="">
-              <input type="file" name="photo" accept="image/*" id="photo-input"
-                     class="{{ $input }} py-1.5 file:mr-3 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-xs">
+              <input type="file" name="photo" accept="image/*" id="photo-input" class="{{ $fileInput }} min-w-0">
             </div>
           </div>
 
           @foreach(['cv' => 'CV', 'id_scan' => 'Scan KTP', 'seaman_book_scan' => 'Scan Seaman Book', 'coc_scan' => 'Scan COC'] as $field => $heading2)
             @php $stored = $candidate?->{$field . '_path'}; @endphp
-            <div>
+            <div class="min-w-0">
               <label class="{{ $label }}">{{ $heading2 }}</label>
-              <input type="file" name="{{ $field }}" class="{{ $input }} py-1.5 file:mr-3 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-xs">
+              <input type="file" name="{{ $field }}" accept="image/*,application/pdf" class="{{ $fileInput }}">
               @if($stored)
-                <a href="{{ Storage::url($stored) }}" target="_blank" rel="noopener" class="text-[11px] text-brand hover:underline">Lihat file saat ini</a>
+                <button type="button" data-preview="{{ Storage::url($stored) }}" data-preview-title="{{ $heading2 }} — {{ basename($stored) }}"
+                        class="mt-1 text-[11px] text-brand hover:underline">Preview file saat ini ({{ basename($stored) }})</button>
               @endif
             </div>
           @endforeach
 
-          <div class="md:col-span-4 min-w-0">
+          <div class="min-w-0">
             <label class="{{ $label }}">Dokumen lain</label>
-            <input type="file" name="other_documents[]" multiple class="{{ $input }} py-1.5 file:mr-3 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-xs">
+            <input type="file" name="other_documents[]" multiple class="{{ $fileInput }}">
             @foreach($candidate?->other_documents ?? [] as $doc)
-              <a href="{{ Storage::url($doc['path']) }}" target="_blank" rel="noopener" class="block text-[11px] text-brand hover:underline">{{ $doc['name'] }}</a>
+              <button type="button" data-preview="{{ Storage::url($doc['path']) }}" data-preview-title="{{ $doc['name'] }}"
+                      class="block mt-1 text-[11px] text-brand hover:underline truncate max-w-full">{{ $doc['name'] }}</button>
             @endforeach
           </div>
         </div>

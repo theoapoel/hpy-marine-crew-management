@@ -1,27 +1,18 @@
 <!doctype html>
 <html lang="id">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pilih Company — HPYMarine</title>
-<link rel="icon" type="image/png" href="{{ route('brand.image', 'hpy-mark.png') }}">
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-tailwind.config = {
-  theme: { extend: {
-    colors: { brand:'#2563eb', 'brand-d':'#1e40af', line:'#e2e8f0', muted:'#64748b' },
-    fontFamily: { sans: ['Inter','ui-sans-serif','system-ui','sans-serif'] }
-  } }
-}
-</script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>html,body{font-family:Inter,sans-serif}</style>
+@include('layouts.partials.head')
 </head>
-<body class="min-h-screen bg-gradient-to-br from-brand-d to-brand flex items-center justify-center p-6">
+<body class="min-h-screen font-sans bg-navy flex items-center justify-center p-6 relative overflow-hidden">
 
-  <div class="w-full max-w-sm">
-    <div class="bg-white rounded-2xl shadow-xl p-8">
+  {{-- Quiet backdrop: two soft ocean-blue glows over the navy. --}}
+  <div aria-hidden="true" class="pointer-events-none absolute -top-40 -left-32 size-[32rem] rounded-full bg-brand/40 blur-3xl"></div>
+  <div aria-hidden="true" class="pointer-events-none absolute -bottom-48 -right-24 size-[28rem] rounded-full bg-sky-400/20 blur-3xl"></div>
+
+
+  <div class="relative w-full max-w-sm" data-enter>
+    <div class="bg-white rounded-2xl shadow-2xl shadow-black/30 ring-1 ring-white/10 p-8">
       <div class="flex flex-col items-center text-center pb-6 mb-6 border-b border-line">
         <img src="{{ route('brand.image', 'hpy-logo.png') }}" alt="HPY" class="h-12 w-auto object-contain">
         <div class="text-sm font-semibold text-slate-900 mt-3">HPYMarine</div>
@@ -43,7 +34,7 @@ tailwind.config = {
 
         @forelse($companies as $company)
           @php $profile = $profiles[$company] ?? ['logo' => null, 'abbr' => null]; @endphp
-          <button type="submit" name="company" value="{{ $company }}"
+          <button type="submit" name="company" value="{{ $company }}" data-press
                   class="w-full flex items-center gap-3 text-left rounded-lg border px-4 py-3 text-sm transition
                          {{ $current === $company
                             ? 'border-brand bg-brand/5 text-brand font-medium'

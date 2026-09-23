@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\ManagesErpDoctypes;
 use App\Services\Erpnext\ErpnextClient;
 use Illuminate\Console\Command;
 
@@ -13,6 +14,8 @@ use Illuminate\Console\Command;
  */
 class SyncVesselTypes extends Command
 {
+    use ManagesErpDoctypes;
+
     protected $signature = 'erp:sync-vessel-types';
 
     protected $description = 'Create the "Vessel Type" and "Vessel Certificate Type" doctypes in ERP HPY, seed them, and link the fields';
@@ -87,7 +90,7 @@ class SyncVesselTypes extends Command
                 'options' => "\nLiquid Cargo\nDry Cargo\nOffshore\nSupport\nPassenger\nOther"],
             ['fieldname' => 'is_active', 'label' => 'Active', 'fieldtype' => 'Check', 'default' => '1'],
             ['fieldname' => 'description', 'label' => 'Description', 'fieldtype' => 'Small Text'],
-        ]);
+        ], usersMayAdd: true);
     }
 
     private function ensureCertificateDoctype(ErpnextClient $client): void
@@ -100,31 +103,6 @@ class SyncVesselTypes extends Command
             ['fieldname' => 'validity_months', 'label' => 'Validity (months)', 'fieldtype' => 'Int', 'in_list_view' => 1],
             ['fieldname' => 'is_active', 'label' => 'Active', 'fieldtype' => 'Check', 'default' => '1'],
         ]);
-    }
-
-    /** @param array<int, array<string, mixed>> $fields */
-    private function ensureDoctype(ErpnextClient $client, string $doctype, string $titleField, array $fields): void
-    {
-        if ($client->exists('DocType', $doctype)) {
-            $this->line("  = {$doctype} (already there)");
-
-            return;
-        }
-
-        $client->create('DocType', [
-            'name' => $doctype,
-            'module' => 'HR',
-            'custom' => 1,
-            'autoname' => "field:{$titleField}",
-            'title_field' => $titleField,
-            'fields' => $fields,
-            'permissions' => [
-                ['role' => 'HR Manager', 'read' => 1, 'write' => 1, 'create' => 1, 'delete' => 1, 'report' => 1, 'export' => 1],
-                ['role' => 'HR User', 'read' => 1, 'report' => 1],
-            ],
-        ]);
-
-        $this->info("  + {$doctype}");
     }
 
     /** @return array<string, array<string, mixed>> */
@@ -161,61 +139,5 @@ class SyncVesselTypes extends Command
         }
 
         return $rows;
-    }
-
-    /** @param array<string, array<string, mixed>> $rows */
-    private function seed(ErpnextClient $client, string $doctype, array $rows): void
-    {
-        $existing = collect($client->list($doctype, ['name'], [], 500))->pluck('name')->all();
-
-        foreach ($rows as $name => $row) {
-            if (in_array($name, $existing, true)) {
-                continue;
-            }
-
-            $client->create($doctype, $row);
-            $this->info("  + {$name}");
-        }
-
-        $this->line('  = ' . count(array_intersect(array_keys($rows), $existing)) . ' sudah ada');
-    }
-
-    /**
-     * Point a field at its new master doctype. ERP HPY refuses some fieldtype changes
-     * outright; when it does, the Select stays but its options are refreshed from the
-     * same records, so both sides still agree on the list.
-     */
-    private function repoint(ErpnextClient $client, string $parent, string $fieldname, string $target): void
-    {
-        $document = $client->get('DocType', $parent);
-        $fields = $document['fields'] ?? [];
-
-        $position = collect($fields)->search(fn ($f) => $f['fieldname'] === $fieldname);
-
-        if ($position === false) {
-            $this->warn("  ! {$parent}.{$fieldname} tidak ditemukan");
-
-            return;
-        }
-
-        if (($fields[$position]['fieldtype'] ?? null) === 'Link' && ($fields[$position]['options'] ?? null) === $target) {
-            $this->line("  = {$parent}.{$fieldname} (already a Link)");
-
-            return;
-        }
-
-        $asLink = $fields;
-        $asLink[$position]['fieldtype'] = 'Link';
-        $asLink[$position]['options'] = $target;
-
-        try {
-            $client->update('DocType', $parent, ['fields' => $asLink]);
-            $this->info("  ~ {$parent}.{$fieldname} -> Link ({$target})");
-        } catch (\Throwable $e) {
-            $fields[$position]['options'] = collect($client->list($target, ['name'], [], 500))->pluck('name')->implode("\n");
-            $client->update('DocType', $parent, ['fields' => $fields]);
-
-            $this->warn("  ! ERP HPY menolak ubah ke Link; opsi Select {$parent}.{$fieldname} disamakan dengan {$target}");
-        }
     }
 }

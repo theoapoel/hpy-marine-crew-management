@@ -22,7 +22,10 @@
   <div class="flex items-start justify-between">
     <div class="flex items-start gap-4">
       @if($crew->image)
-        <img src="{{ $file($crew->image) }}" alt="{{ $crew->name }}" class="w-16 h-16 rounded-xl object-cover border border-line">
+        <button type="button" data-preview="{{ $file($crew->image) }}" data-preview-title="{{ $crew->name }} — photo" aria-label="Preview photo"
+                class="shrink-0 rounded-xl ring-offset-2 hover:ring-2 hover:ring-brand/40">
+          <img src="{{ $file($crew->image) }}" alt="{{ $crew->name }}" class="w-16 h-16 rounded-xl object-cover border border-line">
+        </button>
       @endif
       <div>
         <a href="{{ route('crew.index') }}" class="text-xs text-muted hover:text-slate-900">← Back to Crew Master</a>
@@ -43,30 +46,19 @@
         'Vessel' => $crew->vessel,
         'Company' => $crew->company,
         'Department' => $crew->department,
-        'Branch' => $crew->branch,
         'Employee Number' => $crew->employee_number,
         'Employee Status' => $crew->employee_status,
         'Sign On Date' => $fmt($crew->sign_on_date),
         'Contract End Date' => $fmt($crew->contract_end_date),
         'Date of Joining' => $fmt($crew->date_of_joining),
       ],
-      'Seafarer & Personal' => [
+      'Seafarer Details & Contacts' => [
         'Nationality' => $crew->nationality,
-        'Seaman Book No.' => $crew->seaman_book_no,
-        'Seaman Book Expiry' => $fmt($crew->seaman_book_expiry),
         'Gender' => $crew->gender,
         'Date of Birth' => $fmt($crew->date_of_birth),
         'Marital Status' => $crew->marital_status,
         'Blood Group' => $crew->blood_group,
         'Health Details' => $crew->health_details,
-      ],
-      'Passport' => [
-        'Passport Number' => $crew->passport_number,
-        'Date of Issue' => $fmt($crew->date_of_issue),
-        'Valid Upto' => $fmt($crew->valid_upto),
-        'Place of Issue' => $crew->place_of_issue,
-      ],
-      'Address & Contacts' => [
         'Mobile' => $crew->cell_number,
         'Personal Email' => $crew->personal_email,
         'Company Email' => $crew->company_email,
@@ -76,11 +68,10 @@
         'Emergency Phone' => $crew->emergency_phone_number,
         'Relation' => $crew->relation,
       ],
-      'Bank' => [
-        'Bank Name' => $crew->bank_name,
-        'Bank A/C No.' => $crew->bank_ac_no,
-      ],
     ];
+    $salary = filled($crew->last_salary)
+      ? trim(($crew->last_salary_currency ?? '') . ' ' . number_format((float) $crew->last_salary, 2))
+      : null;
   @endphp
 
   <div data-tab-group>
@@ -89,6 +80,7 @@
         <button type="button" data-tab-target="{{ Str::slug($groupName) }}"
                 class="px-4 py-2 text-sm border-b-2 -mb-px border-transparent text-muted hover:text-slate-900">{{ $groupName }}</button>
       @endforeach
+      <button type="button" data-tab-target="bank" class="px-4 py-2 text-sm border-b-2 -mb-px border-transparent text-muted hover:text-slate-900">Bank Details</button>
       <button type="button" data-tab-target="certificates" class="px-4 py-2 text-sm border-b-2 -mb-px border-transparent text-muted hover:text-slate-900">Certificates &amp; Documents</button>
     </div>
 
@@ -105,6 +97,47 @@
       </div>
     </div>
   @endforeach
+
+  {{-- Bank details --}}
+  <div data-tab-panel="bank" class="space-y-5">
+    <div class="bg-panel border border-line rounded-xl p-6 shadow-sm">
+      <div class="text-[11px] uppercase tracking-wider text-muted">Last Salary</div>
+      <div class="text-xl font-semibold text-slate-900 mt-1 tabular-nums">{{ $salary ?? '—' }}</div>
+    </div>
+
+    <div class="bg-panel border border-line rounded-xl shadow-sm overflow-hidden">
+      <h2 class="text-sm font-semibold text-slate-900 px-6 pt-6 pb-4">Bank Accounts</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-[11px] uppercase text-muted tracking-wider bg-slate-50 border-y border-line">
+              <th class="text-left px-6 py-3 font-medium">Bank</th>
+              <th class="text-left px-3 py-3 font-medium">Account Holder</th>
+              <th class="text-left px-3 py-3 font-medium">Account Number</th>
+              <th class="text-left px-6 py-3 font-medium">Bank Address</th>
+            </tr>
+          </thead>
+          <tbody>
+            @forelse($crew->bank_accounts ?? [] as $account)
+              <tr class="border-b border-line last:border-0">
+                <td class="px-6 py-3 text-slate-900 font-medium">
+                  {{ $account->bank_name ?? '—' }}
+                  @if($loop->first && count($crew->bank_accounts) > 1)
+                    <span class="chip border bg-brand/5 text-brand border-brand/20 ml-1">Primary</span>
+                  @endif
+                </td>
+                <td class="px-3 py-3 text-slate-600">{{ $account->account_holder ?? '—' }}</td>
+                <td class="px-3 py-3 text-slate-600 tabular-nums">{{ $account->account_number ?? '—' }}</td>
+                <td class="px-6 py-3 text-slate-600 whitespace-pre-line">{{ $account->bank_address ?? '—' }}</td>
+              </tr>
+            @empty
+              <tr><td colspan="4" class="px-6 py-10 text-center text-muted">Belum ada rekening bank.</td></tr>
+            @endforelse
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
   {{-- Certificates --}}
   <div data-tab-panel="certificates" class="bg-panel border border-line rounded-xl shadow-sm overflow-hidden">
@@ -137,8 +170,11 @@
               </td>
               <td class="px-6 py-3 text-right">
                 @if(!empty($certificate->attachment))
-                  <a href="{{ $file($certificate->attachment) }}" target="_blank" rel="noopener"
-                     class="text-brand hover:text-brand-d font-medium">Download</a>
+                  <button type="button" data-preview="{{ $file($certificate->attachment) }}"
+                          data-preview-title="{{ ($certificate->certificate_type ?? 'Document') . ' — ' . basename($certificate->attachment) }}"
+                          class="text-brand hover:text-brand-d font-medium">Preview</button>
+                  <span class="text-line mx-1">|</span>
+                  <a href="{{ $file($certificate->attachment) }}" download class="text-slate-600 hover:text-slate-900">Download</a>
                 @else
                   <span class="text-muted">—</span>
                 @endif

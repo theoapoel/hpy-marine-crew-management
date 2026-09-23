@@ -6,6 +6,8 @@ use App\Models\CrewAssignment;
 use App\Models\CrewCandidate;
 use App\Repositories\CrewDocumentRepository;
 use App\Services\Erpnext\ErpnextClient;
+use App\Services\OnboardCrew;
+use App\Support\Departments;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -25,13 +27,15 @@ class DashboardController extends Controller
     public function __construct(
         private readonly ErpnextClient $erpnext,
         private readonly CrewDocumentRepository $documents,
+        private readonly OnboardCrew $crew,
     ) {
     }
 
     public function index()
     {
         $vessels = $this->vessels();
-        $onboard = CrewAssignment::ofCompany()->onboard()->get();
+        // Aboard per ERP HPY (Crew Master) and per our own assignments, each person once.
+        $onboard = $this->crew->all();
         $planned = CrewAssignment::ofCompany()->planned()->get();
         $expiring = $this->expiringDocuments();
 
@@ -74,6 +78,7 @@ class DashboardController extends Controller
             'stats' => $stats,
             'ranks' => $this->ranks($onboard),
             'fleet' => $this->fleet($vessels, $onboard, $planned),
+            'signOns' => $this->monthlySignOns(),
             'documents' => $expiring,
             'movements' => $this->movementsThisWeek(),
             'today' => Carbon::today()->translatedFormat('l, j F Y'),
@@ -165,29 +170,61 @@ class DashboardController extends Controller
 
     /**
      * Ranks actually sailing, biggest first — read off the assignments rather than a
-     * fixed list, so a rank nobody holds does not take up a row.
+     * fixed list, so a rank nobody holds does not take up a row. Past ten ranks the
+     * tail folds into "Other" instead of stretching the chart.
      *
-     * @param  Collection<int, CrewAssignment>  $onboard
-     * @return array<int, array<string, mixed>>
+     * @param  Collection<int, object>  $onboard  rows from OnboardCrew
+     * @return array<int, array{name: string, count: int, department: string}>
      */
     private function ranks(Collection $onboard): array
     {
-        $counts = $onboard->countBy(fn ($a) => $a->rank ?: 'Unspecified')->sortDesc()->take(6);
-        $highest = max($counts->first() ?? 0, 1);
+        $counts = $onboard->countBy(fn ($a) => $a->rank ?: 'Unspecified')->sortDesc();
 
-        return $counts->map(fn ($count, $rank) => [
-            'name' => $rank,
+        $rows = $counts->take(10)->map(fn ($count, $rank) => [
+            'name' => (string) $rank,
             'count' => $count,
-            'pct' => round(($count / $highest) * 100),
-        ])->values()->all();
+            'department' => Departments::of((string) $rank),
+        ])->values();
+
+        if ($counts->count() > 10) {
+            $rows->push(['name' => 'Other (' . ($counts->count() - 10) . ' ranks)', 'count' => $counts->slice(10)->sum(), 'department' => 'Other']);
+        }
+
+        return $rows->all();
     }
 
     /**
-     * Manning per ship, emptiest first: a vessel with nobody aboard is the one that
-     * needs looking at, so it must not sit at the bottom of the table.
+     * Crew who actually signed on, per month, for the last twelve months — months
+     * with nobody joining included, so the gaps show. Counts sign ons recorded here
+     * and those made in ERP HPY directly (see OnboardCrew::signOnsSince).
+     *
+     * @return array<int, array{key: string, label: string, full: string, count: int}>
+     */
+    private function monthlySignOns(): array
+    {
+        $from = Carbon::today()->startOfMonth()->subMonths(11);
+
+        $counts = $this->crew->signOnsSince($from)
+            ->countBy(fn (Carbon $date) => $date->format('Y-m'));
+
+        return collect(range(0, 11))->map(function (int $i) use ($from, $counts) {
+            $month = $from->copy()->addMonths($i);
+
+            return [
+                'key' => $month->format('Y-m'),
+                'label' => $month->translatedFormat('M'),
+                'full' => $month->translatedFormat('F Y'),
+                'count' => $counts[$month->format('Y-m')] ?? 0,
+            ];
+        })->all();
+    }
+
+    /**
+     * Manning per ship, most crew first, as the chart reads it. Ships with nobody
+     * aboard still get a row (flagged "no crew"), so an empty vessel is never missing.
      *
      * @param  Collection<int, array<string, mixed>>  $vessels
-     * @param  Collection<int, CrewAssignment>  $onboard
+     * @param  Collection<int, object>  $onboard  rows from OnboardCrew
      * @param  Collection<int, CrewAssignment>  $planned
      * @return array<int, array<string, mixed>>
      */
@@ -195,6 +232,7 @@ class DashboardController extends Controller
     {
         $aboard = $onboard->countBy('vessel');
         $booked = $planned->countBy('vessel');
+        $crews = $onboard->groupBy('vessel');
 
         return $vessels->map(fn (array $v) => [
             'name' => $v['name'],
@@ -203,6 +241,11 @@ class DashboardController extends Controller
             'principal' => $v['principal'] ?? '—',
             'onboard' => $aboard[$v['name']] ?? 0,
             'planned' => $booked[$v['name']] ?? 0,
-        ])->sortBy([['onboard', 'asc'], ['vessel', 'asc']])->values()->all();
+            // Onboard split by department, in the chart's fixed colour order.
+            'departments' => collect(array_keys(Departments::COLORS))
+                ->mapWithKeys(fn ($d) => [$d => ($crews[$v['name']] ?? collect())->filter(fn ($a) => Departments::of($a->rank) === $d)->count()])
+                ->filter()
+                ->all(),
+        ])->sortBy([['onboard', 'desc'], ['vessel', 'asc']])->values()->all();
     }
 }

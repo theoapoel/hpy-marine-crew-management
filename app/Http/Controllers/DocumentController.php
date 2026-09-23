@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Console\Commands\SyncCrewFields;
 use App\Repositories\CrewDocumentRepository;
+use App\Services\Erpnext\ErpnextOptions;
+use App\Support\CrewDocumentTypes;
 use Illuminate\Http\Request;
 
 /**
@@ -22,9 +24,10 @@ class DocumentController extends Controller
         'expiring' => null,
     ];
 
-    public function __construct(private readonly CrewDocumentRepository $documents)
-    {
-    }
+    public function __construct(
+        private readonly CrewDocumentRepository $documents,
+        private readonly ErpnextOptions $options,
+    ) {}
 
     public function index(Request $request, string $view = 'certificates')
     {
@@ -41,10 +44,16 @@ class DocumentController extends Controller
             'view' => $view,
             'documents' => $this->documents->all($filters),
             'filters' => $filters,
-            'types' => SyncCrewFields::CERTIFICATE_TYPES,
+            'types' => $this->types(),
             'statuses' => SyncCrewFields::CERTIFICATE_STATUSES,
             'title' => $this->title($view),
         ]);
+    }
+
+    /** Certificate types from the ERP HPY master; the seed list if it cannot be read. */
+    private function types(): array
+    {
+        return app(CrewDocumentTypes::class)->names();
     }
 
     private function title(string $view): string

@@ -40,11 +40,11 @@
           </div>
 
           @can('assignments.update')
-            <form method="POST" action="{{ route('assignments.do-sign-on', $assignment) }}" class="flex flex-wrap items-end gap-2 ml-auto">
+            <form method="POST" action="{{ route('assignments.do-sign-on', $assignment) }}" class="flex flex-wrap items-end gap-2 ml-auto" data-contract>
               @csrf
               <div>
                 <label class="block text-xs text-muted mb-1">Tanggal Sign On</label>
-                <input type="date" name="sign_on_date" value="{{ now()->format('Y-m-d') }}"
+                <input type="date" name="sign_on_date" data-contract-start value="{{ now()->format('Y-m-d') }}"
                        class="bg-white border border-line rounded-md py-1.5 px-2 text-sm">
               </div>
               <div>
@@ -53,8 +53,13 @@
               </div>
               <div>
                 <label class="block text-xs text-muted mb-1">Kontrak (bulan)</label>
-                <input type="number" name="contract_months" min="1" max="36" value="{{ $assignment->contract_months ?: 6 }}"
+                <input type="number" name="contract_months" data-contract-months min="1" max="36" value="{{ $assignment->contract_months ?: 6 }}"
                        class="w-24 bg-white border border-line rounded-md py-1.5 px-2 text-sm">
+              </div>
+              <div>
+                <label class="block text-xs text-muted mb-1">Rencana Sign Off</label>
+                <input type="date" name="planned_sign_off_date" data-contract-end
+                       class="bg-white border border-line rounded-md py-1.5 px-2 text-sm">
               </div>
               <button class="bg-brand hover:bg-brand-d text-white text-sm font-medium rounded-md px-4 py-2">Sign On</button>
             </form>
@@ -67,6 +72,51 @@
       </div>
     @endforelse
   </div>
+
+  {{-- Who boarded lately, whether signed on here or from the assignment form. --}}
+  @if($recent->isNotEmpty())
+    <section class="bg-panel border border-line rounded-xl shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-line">
+        <h2 class="text-sm font-semibold text-slate-900">Baru Sign On</h2>
+        <p class="text-[11px] text-muted">30 hari terakhir · {{ $recent->count() }} crew</p>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-[11px] uppercase text-muted tracking-wider bg-slate-50 border-b border-line">
+              <th class="text-left px-5 py-2.5 font-medium">Crew</th>
+              <th class="text-left px-3 py-2.5 font-medium">Kapal</th>
+              <th class="text-left px-3 py-2.5 font-medium">Sign On</th>
+              <th class="text-left px-3 py-2.5 font-medium">Pelabuhan</th>
+              <th class="text-left px-3 py-2.5 font-medium">Rencana Sign Off</th>
+              <th class="text-left px-5 py-2.5 font-medium">ERP HPY</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach($recent as $assignment)
+              <tr class="border-t border-line hover:bg-slate-50">
+                <td class="px-5 py-3">
+                  <a href="{{ route('assignments.show', $assignment) }}" class="font-medium text-slate-900 hover:text-brand">{{ $assignment->crew_name }}</a>
+                  <div class="text-[11px] text-muted">{{ $assignment->assignment_code }} · {{ $assignment->rank ?: '—' }}</div>
+                </td>
+                <td class="px-3 py-3 text-slate-600">{{ $assignment->vessel ?: '—' }}</td>
+                <td class="px-3 py-3 text-slate-600">{{ $assignment->sign_on_date?->format('d M Y') }}</td>
+                <td class="px-3 py-3 text-slate-600">{{ $assignment->sign_on_port ?: '—' }}</td>
+                <td class="px-3 py-3 text-slate-600">{{ $assignment->planned_sign_off_date?->format('d M Y') ?? '—' }}</td>
+                <td class="px-5 py-3">
+                  @if($assignment->employee_id)
+                    <span class="chip border bg-emerald-50 text-emerald-700 border-emerald-200">{{ $assignment->employee_id }}</span>
+                  @else
+                    <span class="chip border bg-amber-50 text-amber-700 border-amber-200" title="Belum ditautkan ke Employee — Crew Master tidak ikut ter-update">not linked</span>
+                  @endif
+                </td>
+              </tr>
+            @endforeach
+          </tbody>
+        </table>
+      </div>
+    </section>
+  @endif
 
   <p class="text-[11px] text-muted">Sign on juga memperbarui Employee di ERP HPY: status crew jadi Onboard, kapal dan tanggal kontrak ikut terisi.</p>
 @endsection

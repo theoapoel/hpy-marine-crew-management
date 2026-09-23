@@ -35,6 +35,8 @@ class Principal extends Model
         'contract_start_date' => 'date',
         'contract_end_date' => 'date',
         'manning_fee_amount' => 'decimal:2',
+        'addresses' => 'array',
+        'manning_fees' => 'array',
         'erpnext_synced_at' => 'datetime',
     ];
 
@@ -45,6 +47,14 @@ class Principal extends Model
     public const CONTRACT_TYPES = ['exclusive', 'non_exclusive'];
 
     public const FEE_TYPES = ['per_crew', 'percentage', 'flat_monthly'];
+
+    public const ADDRESS_TYPES = ['Head Office', 'Branch Office', 'Billing', 'Operational', 'Other'];
+
+    /** Fields of one address row; the first row is mirrored onto the single columns. */
+    public const ADDRESS_FIELDS = ['address_type', 'address', 'city', 'province', 'postal_code', 'country', 'phone', 'fax', 'email', 'wechat'];
+
+    /** Fields of one manning fee row; the first row is mirrored onto the single columns. */
+    public const FEE_FIELDS = ['fee_type', 'amount', 'currency', 'description'];
 
     public function getRouteKeyName(): string
     {
@@ -129,6 +139,39 @@ class Principal extends Model
         return $this->contactPersons->firstWhere('is_primary', true) ?? $this->contactPersons->first();
     }
 
+    /**
+     * Address rows, or for a principal saved before rows existed, one row built from
+     * the single columns.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function addressRows(): array
+    {
+        if (! empty($this->addresses)) {
+            return array_values($this->addresses);
+        }
+
+        $row = array_filter([
+            'address' => $this->head_office_address, 'city' => $this->city, 'province' => $this->province,
+            'postal_code' => $this->postal_code, 'phone' => $this->phone, 'fax' => $this->fax,
+            'email' => $this->email, 'wechat' => $this->wechat,
+        ], 'filled');
+
+        return $row ? [['address_type' => 'Head Office'] + $row] : [];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function feeRows(): array
+    {
+        if (! empty($this->manning_fees)) {
+            return array_values($this->manning_fees);
+        }
+
+        return filled($this->manning_fee_type) || filled($this->manning_fee_amount)
+            ? [['fee_type' => $this->manning_fee_type, 'amount' => $this->manning_fee_amount, 'currency' => $this->currency]]
+            : [];
+    }
+
     public function getIsContractActiveAttribute(): bool
     {
         if ($this->status !== 'active') {
@@ -189,6 +232,7 @@ class Principal extends Model
             'postal_code' => $this->postal_code,
             'phone' => $this->phone,
             'fax' => $this->fax,
+            'wechat' => $this->wechat,
             'email' => $this->email,
             'website' => $this->website,
             'contract_start_date' => $this->contract_start_date?->toDateString(),
@@ -204,12 +248,20 @@ class Principal extends Model
             'tax_id' => $this->tax_id,
             'bank_details' => $this->bank_details,
             'notes' => $this->notes,
+            'addresses' => collect($this->addressRows())->map(fn ($row) => array_filter($row, 'filled'))->values()->all(),
+            'manning_fees' => collect($this->feeRows())->map(fn ($row) => array_filter([
+                'fee_type' => $this->label($row['fee_type'] ?? null),
+                'amount' => $row['amount'] ?? null,
+                'currency' => $row['currency'] ?? null,
+                'description' => $row['description'] ?? null,
+            ], 'filled'))->values()->all(),
             'contact_persons' => $this->contactPersons->map(fn (PrincipalContactPerson $person) => array_filter([
                 'contact_name' => $person->name,
                 'position' => $person->position,
                 'email' => $person->email,
                 'phone' => $person->phone,
                 'whatsapp' => $person->whatsapp,
+                'wechat' => $person->wechat,
                 'is_primary' => $person->is_primary ? 1 : 0,
                 'notes' => $person->notes,
             ], fn ($value) => $value !== null && $value !== ''))->values()->all(),

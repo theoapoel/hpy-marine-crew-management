@@ -26,23 +26,30 @@ class PrincipalRequest extends FormRequest
             'country' => ['nullable', 'string', 'max:100'],
             'status' => ['required', Rule::in(Principal::STATUSES)],
 
-            // Address & contact
-            'head_office_address' => ['nullable', 'string', 'max:1000'],
-            'city' => ['nullable', 'string', 'max:100'],
-            'province' => ['nullable', 'string', 'max:100'],
-            'postal_code' => ['nullable', 'string', 'max:10'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'fax' => ['nullable', 'string', 'max:50'],
-            'email' => ['nullable', 'email', 'max:150'],
+            // Address & contact: one row per office
             'website' => ['nullable', 'string', 'max:150'],
+            'addresses' => ['nullable', 'array'],
+            'addresses.*.address_type' => ['nullable', Rule::in(Principal::ADDRESS_TYPES)],
+            'addresses.*.address' => ['nullable', 'string', 'max:1000'],
+            'addresses.*.city' => ['nullable', 'string', 'max:100'],
+            'addresses.*.province' => ['nullable', 'string', 'max:100'],
+            'addresses.*.postal_code' => ['nullable', 'string', 'max:10'],
+            'addresses.*.country' => ['nullable', 'string', 'max:100'],
+            'addresses.*.phone' => ['nullable', 'string', 'max:50'],
+            'addresses.*.fax' => ['nullable', 'string', 'max:50'],
+            'addresses.*.email' => ['nullable', 'email', 'max:150'],
+            'addresses.*.wechat' => ['nullable', 'string', 'max:100'],
 
             // Business terms
             'contract_start_date' => ['nullable', 'date'],
             'contract_end_date' => ['nullable', 'date', 'after:contract_start_date'],
             'contract_type' => ['nullable', Rule::in(Principal::CONTRACT_TYPES)],
-            'manning_fee_type' => ['nullable', Rule::in(Principal::FEE_TYPES)],
-            'manning_fee_amount' => ['nullable', 'numeric', 'min:0'],
-            'currency' => ['nullable', 'string', 'max:5'],
+            // Manning fees: one row per arrangement
+            'manning_fees' => ['nullable', 'array'],
+            'manning_fees.*.fee_type' => ['nullable', Rule::in(Principal::FEE_TYPES)],
+            'manning_fees.*.amount' => ['nullable', 'numeric', 'min:0'],
+            'manning_fees.*.currency' => ['nullable', 'string', 'max:5'],
+            'manning_fees.*.description' => ['nullable', 'string', 'max:255'],
             'payment_terms' => ['nullable', 'string', 'max:100'],
 
             // Compliance
@@ -63,6 +70,7 @@ class PrincipalRequest extends FormRequest
             'contact_persons.*.email' => ['nullable', 'email', 'max:150'],
             'contact_persons.*.phone' => ['nullable', 'string', 'max:50'],
             'contact_persons.*.whatsapp' => ['nullable', 'string', 'max:50'],
+            'contact_persons.*.wechat' => ['nullable', 'string', 'max:100'],
             'contact_persons.*.is_primary' => ['nullable', 'boolean'],
             'contact_persons.*.notes' => ['nullable', 'string', 'max:500'],
         ];

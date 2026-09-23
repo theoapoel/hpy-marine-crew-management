@@ -7,7 +7,6 @@
   @php
     $text = fn ($v) => filled($v) ? ucwords(str_replace('_', ' ', (string) $v)) : '—';
     $fmt = fn ($d) => $d ? $d->format('d M Y') : '—';
-    $money = fn ($v) => filled($v) ? $principal->currency . ' ' . number_format((float) $v, 2) : '—';
     $statusColors = [
       'prospect' => 'bg-slate-100 text-slate-600 border-slate-200',
       'active' => 'bg-green-50 text-green-700 border-green-200',
@@ -77,22 +76,10 @@
           'Primary Contact' => $principal->primary_contact?->name,
           'Vessels' => count($vessels),
         ],
-        'Address & Contact' => [
-          'Head Office' => $principal->head_office_address,
-          'City' => $principal->city,
-          'Province' => $principal->province,
-          'Postal Code' => $principal->postal_code,
-          'Phone' => $principal->phone,
-          'Fax' => $principal->fax,
-          'Email' => $principal->email,
-          'Website' => $principal->website,
-        ],
         'Business Terms' => [
           'Contract Start' => $fmt($principal->contract_start_date),
           'Contract End' => $fmt($principal->contract_end_date),
           'Contract Type' => $text($principal->contract_type),
-          'Manning Fee Type' => $text($principal->manning_fee_type),
-          'Manning Fee' => $money($principal->manning_fee_amount),
           'Payment Terms' => $principal->payment_terms,
         ],
         'Compliance & Financial' => [
@@ -105,6 +92,30 @@
       ];
     @endphp
 
+    <div class="bg-panel border border-line rounded-xl p-6 shadow-sm">
+      <div class="flex flex-wrap items-baseline justify-between gap-2 mb-4">
+        <h2 class="text-sm font-semibold text-slate-900">Address &amp; Contact</h2>
+        @if($principal->website)<span class="text-xs text-muted">{{ $principal->website }}</span>@endif
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        @forelse($principal->addressRows() as $address)
+          <div class="border border-line rounded-lg p-4 text-sm min-w-0">
+            <span class="chip border bg-slate-50 text-slate-600 border-line">{{ $address['address_type'] ?? 'Address' }}</span>
+            <p class="mt-2 text-slate-800 font-medium whitespace-pre-line">{{ collect([$address['address'] ?? null, implode(' ', array_filter([$address['city'] ?? null, $address['province'] ?? null, $address['postal_code'] ?? null])), $address['country'] ?? null])->filter()->implode("\n") ?: '—' }}</p>
+            <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+              @foreach(['phone' => 'Phone', 'fax' => 'Fax', 'email' => 'Email', 'wechat' => 'WeChat'] as $key => $name)
+                @if(filled($address[$key] ?? null))
+                  <dt class="text-muted">{{ $name }}</dt><dd class="text-slate-700 truncate">{{ $address[$key] }}</dd>
+                @endif
+              @endforeach
+            </dl>
+          </div>
+        @empty
+          <p class="text-sm text-muted">No address yet.</p>
+        @endforelse
+      </div>
+    </div>
+
     @foreach($groups as $group => $rows)
       <div class="bg-panel border border-line rounded-xl p-6 shadow-sm">
         <h2 class="text-sm font-semibold text-slate-900 mb-4">{{ $group }}</h2>
@@ -116,6 +127,32 @@
             </div>
           @endforeach
         </div>
+        @if($group === 'Business Terms')
+          <div class="mt-6 overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-[11px] uppercase text-muted tracking-wider border-b border-line">
+                  <th class="text-left py-2 font-medium">Manning Fee Type</th>
+                  <th class="text-right py-2 font-medium">Amount</th>
+                  <th class="text-left px-3 py-2 font-medium">Currency</th>
+                  <th class="text-left py-2 font-medium">Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                @forelse($principal->feeRows() as $fee)
+                  <tr class="border-t border-line">
+                    <td class="py-2 text-slate-800 font-medium">{{ $text($fee['fee_type'] ?? null) }}</td>
+                    <td class="py-2 text-right tabular-nums text-slate-800">{{ filled($fee['amount'] ?? null) ? number_format((float) $fee['amount'], 2) : '—' }}</td>
+                    <td class="px-3 py-2 text-slate-600">{{ $fee['currency'] ?? '—' }}</td>
+                    <td class="py-2 text-slate-600">{{ $fee['description'] ?? '—' }}</td>
+                  </tr>
+                @empty
+                  <tr><td colspan="4" class="py-4 text-center text-muted">No manning fee yet.</td></tr>
+                @endforelse
+              </tbody>
+            </table>
+          </div>
+        @endif
       </div>
     @endforeach
   @endif
@@ -166,6 +203,7 @@
               <th class="text-left px-3 py-3 font-medium">Email</th>
               <th class="text-left px-3 py-3 font-medium">Phone</th>
               <th class="text-left px-3 py-3 font-medium">WhatsApp</th>
+              <th class="text-left px-3 py-3 font-medium">WeChat</th>
               <th class="text-left px-3 py-3 font-medium">Primary</th>
             </tr>
           </thead>
@@ -177,6 +215,7 @@
                 <td class="px-3 py-3 text-slate-600">{{ $contact->email ?: '—' }}</td>
                 <td class="px-3 py-3 text-slate-600">{{ $contact->phone ?: '—' }}</td>
                 <td class="px-3 py-3 text-slate-600">{{ $contact->whatsapp ?: '—' }}</td>
+                <td class="px-3 py-3 text-slate-600">{{ $contact->wechat ?: '—' }}</td>
                 <td class="px-3 py-3">
                   @if($contact->is_primary)
                     <span class="chip border bg-brand/10 text-brand border-brand/20">Primary</span>
@@ -186,7 +225,7 @@
                 </td>
               </tr>
             @empty
-              <tr><td colspan="6" class="px-5 py-10 text-center text-muted">No contact persons yet.</td></tr>
+              <tr><td colspan="7" class="px-5 py-10 text-center text-muted">No contact persons yet.</td></tr>
             @endforelse
           </tbody>
         </table>

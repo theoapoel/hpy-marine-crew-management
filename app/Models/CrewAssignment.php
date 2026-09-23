@@ -90,6 +90,16 @@ class CrewAssignment extends Model
             && $this->planned_sign_off_date->isPast();
     }
 
+    /**
+     * Planned sign off for a contract of N months from a start date. A month is a
+     * calendar month that never spills over: 31 Jan + 1 month is 28/29 Feb, not March.
+     * The form's live preview (forms.js) counts the same way.
+     */
+    public static function contractEnd(Carbon|string $start, int $months): string
+    {
+        return Carbon::parse($start)->addMonthsNoOverflow($months)->toDateString();
+    }
+
     public static function nextCode(?Carbon $on = null): string
     {
         $year = ($on ?? now())->format('Y');
@@ -145,7 +155,7 @@ class CrewAssignment extends Model
             'sign_on_port' => $data['sign_on_port'] ?? $this->sign_on_port,
             'contract_months' => $months ?: null,
             'planned_sign_off_date' => $data['planned_sign_off_date']
-                ?? ($months ? Carbon::parse($signOn)->addMonths($months)->toDateString() : $this->planned_sign_off_date),
+                ?? ($months ? self::contractEnd($signOn, $months) : $this->planned_sign_off_date),
         ], fn ($v) => $v !== null))->save();
 
         return $this;
