@@ -3,7 +3,8 @@
 
   rows:  [['label' => ..., 'value' => int, 'tip' => optional extra line, 'href' => optional,
            'color' => optional hex for the whole bar, 'display' => optional text instead of the number,
-           'segments' => optional [['name' => ..., 'value' => int, 'color' => hex], ...] to stack], ...]
+           'segments' => optional [['name' => ..., 'value' => int, 'color' => hex], ...] to stack,
+           'active' => optional bool, the row currently selected (a filter), drawn highlighted], ...]
   unit:  what the value counts, for tooltips and the table ("crew")
   empty: text for a zero value, shown as a flag instead of a bar (null = show 0)
   stacked: label and value on one line with the bar full-width beneath — for narrow cards
@@ -28,9 +29,11 @@
       $shown = $row['display'] ?? number_format($value);
     @endphp
     <{{ $tag }} @if($tag === 'a') href="{{ $row['href'] }}" @else tabindex="0" @endif
+       @if(!empty($row['active'])) aria-current="true" @endif
        data-tip data-tip-title="{{ $row['label'] }}"
        data-tip-body="{{ isset($row['display']) ? $row['display'] : $value . ' ' . $unit }}{{ $tipExtra ? ' · ' . $tipExtra : '' }}"
        class="group block -mx-2 px-2 rounded-lg transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 outline-none focus-visible:ring-2 focus-visible:ring-brand/40
+              {{ !empty($row['active']) ? 'bg-brand/5 ring-2 ring-brand/30' : '' }}
               {{ $stacked ? 'py-1.5' : 'grid grid-cols-[minmax(0,8.5rem)_1fr_2.75rem] sm:grid-cols-[minmax(0,10rem)_1fr_2.75rem] items-center gap-3 py-[7px]' }}">
       @if($stacked)
         <span class="flex items-baseline justify-between gap-3 mb-1">

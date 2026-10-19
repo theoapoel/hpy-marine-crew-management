@@ -23,66 +23,47 @@
     </div>
   </div>
 
-  {{-- Rank cards: how many crew hold each rank, and where they are. A card filters the list. --}}
+  {{-- Crew by rank: one stacked bar per rank (onboard / standby / signed off). A bar filters the list. --}}
   @if($rankCards)
     @php
       $activeRank = $filters['rank'] ?? null;
       $allTotal = collect($rankCards)->sum('total');
-      $statusColors = ['onboard' => '#1e8e3e', 'standby' => '#f29900', 'signed_off' => '#cbd5e1'];
-      $departments = collect($rankCards)->pluck('color', 'department');
+      $statusColors = ['Onboard' => '#1e8e3e', 'Standby' => '#f29900', 'Sign Off' => '#cbd5e1'];
       $link = fn (?string $rank) => route('crew.index', array_filter(['search' => $filters['search'] ?? null, 'status' => $filters['status'] ?? null, 'rank' => $rank]));
+      $rankRows = collect($rankCards)->map(fn ($card) => [
+        'label' => $card['rank'],
+        'value' => $card['total'],
+        'segments' => [
+          ['name' => 'Onboard', 'value' => $card['onboard'], 'color' => $statusColors['Onboard']],
+          ['name' => 'Standby', 'value' => $card['standby'], 'color' => $statusColors['Standby']],
+          ['name' => 'Sign Off', 'value' => $card['signed_off'], 'color' => $statusColors['Sign Off']],
+        ],
+        'tip' => $card['department'],
+        'href' => $link($activeRank === $card['rank'] ? null : $card['rank']),
+        'active' => $activeRank === $card['rank'],
+      ])->all();
     @endphp
-    <section aria-label="Crew by rank">
-      <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-        <h2 class="text-sm font-semibold text-slate-900">By Rank</h2>
-        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-600">
-          @foreach($departments as $name => $color)
-            <span class="flex items-center gap-1.5"><span class="size-2 rounded-[3px]" style="background: {{ $color }}"></span>{{ $name }}</span>
-          @endforeach
-          <span class="hidden sm:block w-px h-3 bg-line"></span>
-          <span class="flex items-center gap-1.5"><span class="h-1.5 w-3 rounded-full" style="background: {{ $statusColors['onboard'] }}"></span>Onboard</span>
-          <span class="flex items-center gap-1.5"><span class="h-1.5 w-3 rounded-full" style="background: {{ $statusColors['standby'] }}"></span>Standby</span>
-          <span class="flex items-center gap-1.5"><span class="h-1.5 w-3 rounded-full" style="background: {{ $statusColors['signed_off'] }}"></span>Sign Off</span>
+    <section aria-label="Crew by rank" class="bg-panel border border-line rounded-xl shadow-sm p-5">
+      <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+        <div>
+          <h2 class="text-slate-900 font-semibold">By Rank</h2>
+          <p class="text-xs text-muted">
+            {{ count($rankCards) }} ranks · click a bar to filter the list
+            @if($activeRank)
+              · <a href="{{ $link(null) }}" class="text-brand hover:text-brand-d font-medium">show all ranks</a>
+            @endif
+          </p>
+        </div>
+        <div class="flex items-center gap-4">
+          <x-chart.legend :items="$statusColors" />
+          <div class="text-right">
+            <div class="text-2xl font-semibold text-slate-900 leading-none" data-count>{{ number_format($allTotal) }}</div>
+            <div class="text-[11px] text-muted mt-1">crew</div>
+          </div>
         </div>
       </div>
 
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6 gap-3">
-        <a href="{{ $link(null) }}" @if(!$activeRank) aria-current="true" @endif
-           class="bg-panel relative overflow-hidden rounded-xl border p-4 shadow-sm {{ $activeRank ? 'border-line hover:border-slate-300' : 'border-brand ring-2 ring-brand/20' }}">
-          <span class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#1a73e8] via-[#e8710a] to-[#9334e6]"></span>
-          <div class="text-[11px] text-muted">All ranks</div>
-          <div class="mt-1 text-[13px] font-medium text-slate-900">Every crew</div>
-          <div class="mt-2 text-2xl font-semibold text-slate-900" data-count>{{ number_format($allTotal) }}</div>
-          <div class="mt-1 text-[11px] text-muted">{{ count($rankCards) }} ranks</div>
-        </a>
-
-        @foreach($rankCards as $card)
-          @php $active = $activeRank === $card['rank']; @endphp
-          <a href="{{ $link($active ? null : $card['rank']) }}" @if($active) aria-current="true" @endif
-             title="{{ $active ? 'Show all ranks' : 'Show only ' . $card['rank'] }}"
-             class="bg-panel group relative overflow-hidden rounded-xl border p-4 shadow-sm {{ $active ? 'ring-2' : 'border-line hover:border-slate-300' }}"
-             @if($active) style="border-color: {{ $card['color'] }}; --tw-ring-color: {{ $card['color'] }}33" @endif>
-            <span class="absolute inset-x-0 top-0 h-1" style="background: {{ $card['color'] }}"></span>
-            <div class="flex items-center gap-1.5 text-[11px] text-muted">
-              <span class="size-1.5 rounded-full" style="background: {{ $card['color'] }}"></span>{{ $card['department'] }}
-            </div>
-            <div class="mt-1 text-[13px] font-medium text-slate-900 truncate" title="{{ $card['rank'] }}">{{ $card['rank'] }}</div>
-            <div class="mt-2 text-2xl font-semibold text-slate-900" data-count>{{ number_format($card['total']) }}</div>
-
-            {{-- Where they are: onboard / standby / signed off, with a 2px gap between. --}}
-            <div class="mt-2 flex h-1.5 gap-[2px] rounded-full overflow-hidden bg-slate-100">
-              @foreach(['onboard', 'standby', 'signed_off'] as $key)
-                @if($card[$key] > 0)
-                  <span data-bar class="h-full origin-left" style="flex: {{ $card[$key] }} 1 0; background: {{ $statusColors[$key] }}"></span>
-                @endif
-              @endforeach
-            </div>
-            <div class="mt-1.5 text-[11px] text-muted truncate">
-              {{ $card['onboard'] }} onboard · {{ $card['standby'] }} standby
-            </div>
-          </a>
-        @endforeach
-      </div>
+      <x-chart.bars :rows="$rankRows" unit="crew" label="Rank" />
     </section>
   @endif
 
