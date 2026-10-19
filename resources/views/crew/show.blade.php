@@ -219,7 +219,8 @@
             <th class="text-right px-3 py-3 font-medium">GRT</th>
             <th class="text-left px-3 py-3 font-medium">Sign On</th>
             <th class="text-left px-3 py-3 font-medium">Sign Off</th>
-            <th class="text-left px-6 py-3 font-medium">Appraisal</th>
+            <th class="text-left px-3 py-3 font-medium">Appraisal</th>
+            <th class="text-left px-6 py-3 font-medium">Remarks</th>
           </tr>
         </thead>
         <tbody>
@@ -249,36 +250,39 @@
                   <span class="chip border bg-green-50 text-green-700 border-green-200">Onboard</span>
                 @endif
               </td>
+              @php $field = 'bg-white border border-line rounded-md px-2 text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand'; @endphp
+              <td class="px-3 py-3">
+                @if($canAppraise)
+                  {{-- The select and the remarks textarea in the next cell both belong to this form. --}}
+                  <form method="POST" action="{{ route('crew.appraise', [$crew->id, $berth]) }}" id="{{ $formId }}">
+                    @csrf
+                    <select name="appraisal" class="{{ $field }} py-1 min-w-36">
+                      <option value="">— Not rated —</option>
+                      @foreach(\App\Models\CrewAssignment::APPRAISALS as $grade)
+                        <option value="{{ $grade }}" @selected($berth->appraisal === $grade)>{{ $grade }}</option>
+                      @endforeach
+                    </select>
+                  </form>
+                @elseif($berth->appraisal)
+                  <span class="chip border {{ $appraisalColors[$berth->appraisal] ?? 'bg-slate-100 text-slate-600 border-slate-200' }}">{{ $berth->appraisal }}</span>
+                @else
+                  <span class="text-muted">—</span>
+                @endif
+              </td>
               <td class="px-6 py-3">
                 @if($canAppraise)
-                  <form method="POST" action="{{ route('crew.appraise', [$crew->id, $berth]) }}" id="{{ $formId }}" class="flex flex-col gap-1.5 min-w-48">
-                    @csrf
-                    <div class="flex items-center gap-1.5">
-                      <select name="appraisal" class="bg-white border border-line rounded-md py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand">
-                        <option value="">— Not rated —</option>
-                        @foreach(\App\Models\CrewAssignment::APPRAISALS as $grade)
-                          <option value="{{ $grade }}" @selected($berth->appraisal === $grade)>{{ $grade }}</option>
-                        @endforeach
-                      </select>
-                      <button class="bg-white hover:bg-slate-50 border border-line text-slate-700 text-xs rounded-md px-2.5 py-1.5">Save</button>
-                    </div>
-                    <input type="text" name="appraisal_notes" value="{{ $berth->appraisal_notes }}" placeholder="Notes (optional)"
-                           class="bg-white border border-line rounded-md py-1 px-2 text-xs placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand">
-                  </form>
+                  <div class="flex items-start gap-2">
+                    <textarea name="appraisal_notes" form="{{ $formId }}" rows="2" placeholder="Describe how they performed on this contract"
+                              class="{{ $field }} py-1.5 min-w-64 resize-y">{{ $berth->appraisal_notes }}</textarea>
+                    <button form="{{ $formId }}" class="bg-white hover:bg-slate-50 border border-line text-slate-700 text-xs rounded-md px-2.5 py-1.5 shrink-0">Save</button>
+                  </div>
                 @else
-                  @if($berth->appraisal)
-                    <span class="chip border {{ $appraisalColors[$berth->appraisal] ?? 'bg-slate-100 text-slate-600 border-slate-200' }}">{{ $berth->appraisal }}</span>
-                  @else
-                    <span class="text-muted">—</span>
-                  @endif
-                  @if($berth->appraisal_notes)
-                    <div class="text-[11px] text-muted mt-1 max-w-56">{{ $berth->appraisal_notes }}</div>
-                  @endif
+                  <div class="text-slate-600 whitespace-pre-line max-w-72">{{ $berth->appraisal_notes ?: '—' }}</div>
                 @endif
               </td>
             </tr>
           @empty
-            <tr><td colspan="9" class="px-6 py-10 text-center text-muted">No sea service through us yet. Berths appear here once a crew assignment is signed on.</td></tr>
+            <tr><td colspan="10" class="px-6 py-10 text-center text-muted">No sea service through us yet. Berths appear here once a crew assignment is signed on.</td></tr>
           @endforelse
         </tbody>
       </table>

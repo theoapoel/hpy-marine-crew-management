@@ -74,6 +74,8 @@ class CrewSeaServiceTest extends TestCase
         $response = $this->get('/crew/HR-EMP-0042')->assertOk()
             ->assertSee('Performance Appraisal')
             ->assertSee('Sea Service Record')
+            ->assertSee('Remarks')
+            ->assertSee('name="appraisal_notes"', false)
             ->assertSee('Bulk Carrier')
             ->assertSee('25,063')
             ->assertSee('PT Pelayaran Jaya')

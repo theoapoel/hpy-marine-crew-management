@@ -423,7 +423,8 @@
           <th class="text-right px-3 py-3 font-medium">GRT</th>
           <th class="text-left px-3 py-3 font-medium">Sign On</th>
           <th class="text-left px-3 py-3 font-medium">Sign Off</th>
-          <th class="text-left px-6 py-3 font-medium">Appraisal</th>
+          <th class="text-left px-3 py-3 font-medium">Appraisal</th>
+          <th class="text-left px-6 py-3 font-medium">Remarks</th>
         </tr>
       </thead>
       <tbody>
@@ -448,31 +449,31 @@
                 <span class="chip border bg-green-50 text-green-700 border-green-200">Onboard</span>
               @endif
             </td>
+            <td class="px-3 py-3">
+              @if($canAppraise)
+                <select name="appraisals[{{ $berth->uuid }}][appraisal]" class="{{ $input }} py-1 min-w-36">
+                  <option value="">— Not rated —</option>
+                  @foreach(\App\Models\CrewAssignment::APPRAISALS as $option)
+                    <option value="{{ $option }}" @selected($grade === $option)>{{ $option }}</option>
+                  @endforeach
+                </select>
+              @elseif($grade)
+                <span class="chip border {{ $appraisalColors[$grade] ?? 'bg-slate-100 text-slate-600 border-slate-200' }}">{{ $grade }}</span>
+              @else
+                <span class="text-muted">—</span>
+              @endif
+            </td>
             <td class="px-6 py-3">
               @if($canAppraise)
-                <div class="flex flex-col gap-1.5 min-w-48">
-                  <select name="appraisals[{{ $berth->uuid }}][appraisal]" class="{{ $input }} py-1">
-                    <option value="">— Not rated —</option>
-                    @foreach(\App\Models\CrewAssignment::APPRAISALS as $option)
-                      <option value="{{ $option }}" @selected($grade === $option)>{{ $option }}</option>
-                    @endforeach
-                  </select>
-                  <input type="text" name="appraisals[{{ $berth->uuid }}][notes]" value="{{ $notes }}" placeholder="Notes (optional)" class="{{ $input }} py-1 text-xs">
-                </div>
+                <textarea name="appraisals[{{ $berth->uuid }}][notes]" rows="2" placeholder="Describe how they performed on this contract"
+                          class="{{ $input }} py-1.5 min-w-64 resize-y">{{ $notes }}</textarea>
               @else
-                @if($grade)
-                  <span class="chip border {{ $appraisalColors[$grade] ?? 'bg-slate-100 text-slate-600 border-slate-200' }}">{{ $grade }}</span>
-                @else
-                  <span class="text-muted">—</span>
-                @endif
-                @if($notes)
-                  <div class="text-[11px] text-muted mt-1 max-w-56">{{ $notes }}</div>
-                @endif
+                <div class="text-slate-600 whitespace-pre-line max-w-72">{{ $notes ?: '—' }}</div>
               @endif
             </td>
           </tr>
         @empty
-          <tr><td colspan="9" class="px-6 py-10 text-center text-muted">No sea service through us yet. Berths appear here once a crew assignment is signed on.</td></tr>
+          <tr><td colspan="10" class="px-6 py-10 text-center text-muted">No sea service through us yet. Berths appear here once a crew assignment is signed on.</td></tr>
         @endforelse
       </tbody>
     </table>
