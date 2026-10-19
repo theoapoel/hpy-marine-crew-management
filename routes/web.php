@@ -56,6 +56,8 @@ Route::middleware(['erpnext', 'erpnext.company'])->group(function () {
     Route::post('crew/document-types', [CrewDocumentTypeController::class, 'store'])->name('crew.document-types.store');
     Route::patch('crew/document-types/{type}', [CrewDocumentTypeController::class, 'update'])->name('crew.document-types.update')->where('type', '.*');
     Route::post('crew/certificate-types', [CrewController::class, 'storeCertificateType'])->name('crew.certificate-types.store');
+    // Crew Master as an Excel workbook; declared before the resource so "export" is not read as a crew id.
+    Route::get('crew/export', [CrewController::class, 'export'])->name('crew.export');
     Route::resource('crew', CrewController::class);
 
     // Candidate Pool — lifetime seafarer database, kept locally until promotion.

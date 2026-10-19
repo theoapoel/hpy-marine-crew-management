@@ -7,6 +7,7 @@ use App\Services\Erpnext\ErpnextClient;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator as Paginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Request;
 
@@ -58,12 +59,23 @@ class ErpnextCrewRepository implements CrewRepositoryInterface
         'contract_end_date',
     ];
 
+    /** Columns the Excel export carries: the list columns plus identity, contact and contract fields. */
+    private const EXPORT_FIELDS = [
+        'name', 'employee_name', 'status', 'company', 'designation', 'department', 'employee_number',
+        'gender', 'date_of_birth', 'date_of_joining', 'cell_number', 'personal_email',
+        'passport_number', 'valid_upto', 'contract_end_date',
+        'custom_rank', 'custom_crew_status', 'custom_nationality', 'custom_seaman_book_no',
+        'custom_seaman_book_expiry', 'custom_vessel', 'custom_sign_on_date',
+        'custom_last_salary', 'custom_last_salary_currency',
+    ];
+
+    /** Rows fetched per request while exporting. */
+    private const EXPORT_CHUNK = 500;
+
     /** Crew statuses that mean the person still works for HPY. */
     private const ACTIVE_STATUSES = ['Onboard', 'Standby'];
 
-    public function __construct(private readonly ErpnextClient $client)
-    {
-    }
+    public function __construct(private readonly ErpnextClient $client) {}
 
     private function doctype(): string
     {
@@ -72,21 +84,7 @@ class ErpnextCrewRepository implements CrewRepositoryInterface
 
     public function paginate(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        $erpFilters = [];
-
-        // Crew Master only ever shows the company the session is working in.
-        if ($company = $this->client->company()) {
-            $erpFilters[] = ['company', '=', $company];
-        }
-        if ($status = $filters['status'] ?? null) {
-            $erpFilters[] = ['custom_crew_status', '=', $status];
-        }
-        if ($search = trim((string) ($filters['search'] ?? ''))) {
-            $erpFilters[] = ['employee_name', 'like', "%{$search}%"];
-        }
-        if ($rank = $filters['rank'] ?? null) {
-            $erpFilters[] = $rank === self::RANK_NONE ? ['custom_rank', 'is', 'not set'] : ['custom_rank', '=', $rank];
-        }
+        $erpFilters = $this->erpFilters($filters);
 
         $page = max(1, (int) Request::query('page', 1));
         $start = ($page - 1) * $perPage;
@@ -101,6 +99,52 @@ class ErpnextCrewRepository implements CrewRepositoryInterface
             'path' => Paginator::resolveCurrentPath(),
             'query' => Request::query(),
         ]);
+    }
+
+    public function all(array $filters = []): iterable
+    {
+        $erpFilters = $this->erpFilters($filters);
+        $start = 0;
+
+        // ERP HPY REST pages by offset; walk the list in fixed slices until a short one.
+        do {
+            $rows = $this->client->list($this->doctype(), self::EXPORT_FIELDS, $erpFilters, self::EXPORT_CHUNK, $start, [
+                'order_by' => 'employee_name asc',
+            ]);
+
+            foreach ($rows as $row) {
+                yield $this->hydrate($row);
+            }
+
+            $start += self::EXPORT_CHUNK;
+        } while (count($rows) === self::EXPORT_CHUNK);
+    }
+
+    /**
+     * The list filters as ERP HPY wants them. Crew Master only ever shows the company
+     * the session is working in.
+     *
+     * @param  array{search?: string|null, status?: string|null, rank?: string|null}  $filters
+     * @return array<int, array{0: string, 1: string, 2: mixed}>
+     */
+    private function erpFilters(array $filters): array
+    {
+        $erpFilters = [];
+
+        if ($company = $this->client->company()) {
+            $erpFilters[] = ['company', '=', $company];
+        }
+        if ($status = $filters['status'] ?? null) {
+            $erpFilters[] = ['custom_crew_status', '=', $status];
+        }
+        if ($search = trim((string) ($filters['search'] ?? ''))) {
+            $erpFilters[] = ['employee_name', 'like', "%{$search}%"];
+        }
+        if ($rank = $filters['rank'] ?? null) {
+            $erpFilters[] = $rank === self::RANK_NONE ? ['custom_rank', 'is', 'not set'] : ['custom_rank', '=', $rank];
+        }
+
+        return $erpFilters;
     }
 
     public function rankSummary(): array
@@ -189,7 +233,7 @@ class ErpnextCrewRepository implements CrewRepositoryInterface
      * Build the child table rows, uploading any newly picked file.
      *
      * @param  array<string, mixed>  $data
-     * @return array<int, array<string, mixed>>|null  null when the form carried no certificate section
+     * @return array<int, array<string, mixed>>|null null when the form carried no certificate section
      */
     private function certificateRows(array $data, string $docname): ?array
     {
@@ -240,7 +284,7 @@ class ErpnextCrewRepository implements CrewRepositoryInterface
             return 'Valid';
         }
 
-        $date = \Illuminate\Support\Carbon::parse($expiry);
+        $date = Carbon::parse($expiry);
 
         return match (true) {
             $date->isPast() => 'Expired',
@@ -256,7 +300,7 @@ class ErpnextCrewRepository implements CrewRepositoryInterface
      */
     private function hydrate(array $row): Crew
     {
-        $crew = new Crew();
+        $crew = new Crew;
         // ERP HPY names ("HR-EMP-00001") are strings, not auto-increment ints.
         $crew->incrementing = false;
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\CrewExport;
 use App\Repositories\CrewRepositoryInterface;
 use App\Services\Erpnext\ErpnextOptions;
 use App\Support\CrewDocumentTypes;
@@ -10,6 +11,7 @@ use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CrewController extends Controller
 {
@@ -30,6 +32,20 @@ class CrewController extends Controller
             'filters' => $filters,
             'rankCards' => $this->rankCards(),
         ]);
+    }
+
+    /**
+     * The crew database as an Excel file, honouring the same filters as the list so
+     * what you see is what you get.
+     */
+    public function export(Request $request, CrewExport $export): StreamedResponse
+    {
+        $filters = $request->only('search', 'status', 'rank');
+
+        return $export->download(
+            $this->crews->all($filters),
+            'crew-master-'.now()->format('Ymd-His').'.xlsx',
+        );
     }
 
     /**

@@ -14,7 +14,13 @@
         @endif
       </p>
     </div>
-    <a href="{{ route('crew.create') }}" class="bg-brand hover:bg-brand-d text-white text-sm font-medium rounded-md px-4 py-2 shadow-sm">+ Add Crew</a>
+    <div class="flex items-center gap-2">
+      <a href="{{ route('crew.export', array_filter($filters)) }}"
+         class="bg-white hover:bg-slate-50 border border-line text-slate-700 text-sm rounded-md px-4 py-2 inline-flex items-center gap-1.5">
+        <i data-lucide="file-spreadsheet" class="size-4"></i>Export Excel
+      </a>
+      <a href="{{ route('crew.create') }}" class="bg-brand hover:bg-brand-d text-white text-sm font-medium rounded-md px-4 py-2 shadow-sm">+ Add Crew</a>
+    </div>
   </div>
 
   {{-- Rank cards: how many crew hold each rank, and where they are. A card filters the list. --}}

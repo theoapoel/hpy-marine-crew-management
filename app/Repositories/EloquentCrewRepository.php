@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\Crew;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Local SQLite-backed crew repository (placeholder data until ERP HPY integration).
@@ -12,7 +13,19 @@ class EloquentCrewRepository implements CrewRepositoryInterface
 {
     public function paginate(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        $query = Crew::with('vessel')->latest();
+        return $this->query($filters)->latest()->paginate($perPage)->withQueryString();
+    }
+
+    public function all(array $filters = []): iterable
+    {
+        foreach ($this->query($filters)->orderBy('name')->lazy(200) as $crew) {
+            yield $crew;
+        }
+    }
+
+    private function query(array $filters): Builder
+    {
+        $query = Crew::with('vessel');
 
         if ($search = trim((string) ($filters['search'] ?? ''))) {
             $query->where(function ($q) use ($search) {
@@ -31,7 +44,7 @@ class EloquentCrewRepository implements CrewRepositoryInterface
                 : $query->where('rank', $rank);
         }
 
-        return $query->paginate($perPage)->withQueryString();
+        return $query;
     }
 
     public function rankSummary(): array
@@ -76,7 +89,7 @@ class EloquentCrewRepository implements CrewRepositoryInterface
      */
     private function columnsOnly(array $data): array
     {
-        return array_intersect_key($data, array_flip((new Crew())->getFillable()));
+        return array_intersect_key($data, array_flip((new Crew)->getFillable()));
     }
 
     public function delete(int|string $id): void

@@ -12,8 +12,8 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
  *
  * Returns Crew models so the existing Blade views stay unchanged regardless of source.
  *
- * @param array{search?: string|null, status?: string|null, rank?: string|null} $filters
- *        rank RANK_NONE matches crew with no rank set
+ * $filters is array{search?: string|null, status?: string|null, rank?: string|null};
+ * rank RANK_NONE matches crew with no rank set.
  */
 interface CrewRepositoryInterface
 {
@@ -21,6 +21,15 @@ interface CrewRepositoryInterface
     public const RANK_NONE = 'Unspecified';
 
     public function paginate(array $filters = [], int $perPage = 15): LengthAwarePaginator;
+
+    /**
+     * Every crew member matching the filters, across all pages, for the Excel export.
+     * Yields Crew models one at a time so a large fleet never sits in memory at once.
+     *
+     * @param  array{search?: string|null, status?: string|null, rank?: string|null}  $filters
+     * @return iterable<int, Crew>
+     */
+    public function all(array $filters = []): iterable;
 
     public function find(int|string $id): Crew;
 
