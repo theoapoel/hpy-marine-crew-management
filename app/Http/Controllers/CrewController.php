@@ -139,20 +139,65 @@ class CrewController extends Controller
             ->with('success', "Appraisal saved for {$assignment->vessel}.");
     }
 
-    public function edit(int|string $crew)
+    public function edit(int|string $crew, SeaServiceRecord $seaService)
     {
-        return view('crew.edit', $this->formOptions() + ['crew' => $this->crews->find($crew)]);
+        return view('crew.edit', $this->formOptions() + [
+            'crew' => $this->crews->find($crew),
+            'seaService' => $seaService->for((string) $crew),
+            'canAppraise' => Gate::allows('assignments.update'),
+        ]);
     }
 
     public function update(Request $request, int|string $crew)
     {
         $data = $this->validated($request);
+        $appraisals = $this->validatedAppraisals($request);
 
-        return $this->guarded(function () use ($crew, $data) {
+        return $this->guarded(function () use ($crew, $data, $appraisals) {
             $this->crews->update($crew, $data);
+            $this->saveAppraisals((string) $crew, $appraisals);
 
             return redirect()->route('crew.index')->with('success', 'Crew member updated.');
         });
+    }
+
+    /**
+     * The Performance Appraisal tab rides along on the edit form: one grade and note
+     * per berth, keyed by the assignment uuid.
+     *
+     * @return array<string, array{appraisal: ?string, notes: ?string}>
+     */
+    private function validatedAppraisals(Request $request): array
+    {
+        if (! $request->has('appraisals') || ! Gate::allows('assignments.update')) {
+            return [];
+        }
+
+        return $request->validate([
+            'appraisals' => ['array'],
+            'appraisals.*.appraisal' => ['nullable', Rule::in(CrewAssignment::APPRAISALS)],
+            'appraisals.*.notes' => ['nullable', 'string', 'max:2000'],
+        ])['appraisals'];
+    }
+
+    /**
+     * @param  array<string, array{appraisal: ?string, notes: ?string}>  $appraisals
+     */
+    private function saveAppraisals(string $crew, array $appraisals): void
+    {
+        if ($appraisals === []) {
+            return;
+        }
+
+        // Only this crew member's own berths: a uuid from elsewhere is ignored.
+        CrewAssignment::ofCompany()
+            ->where('employee_id', $crew)
+            ->whereIn('uuid', array_keys($appraisals))
+            ->get()
+            ->each(fn (CrewAssignment $berth) => $berth->update([
+                'appraisal' => $appraisals[$berth->uuid]['appraisal'] ?? null,
+                'appraisal_notes' => $appraisals[$berth->uuid]['notes'] ?? null,
+            ]));
     }
 
     public function destroy(int|string $crew)

@@ -96,6 +96,31 @@ class CrewSeaServiceTest extends TestCase
         $this->assertSame('Reliable on watch.', $berth->fresh()->appraisal_notes);
     }
 
+    public function test_the_edit_form_carries_the_tab_and_saves_the_grades_with_the_crew(): void
+    {
+        $mine = $this->berth();
+        $theirs = $this->berth(['employee_id' => 'HR-EMP-0099']);
+
+        $this->get('/crew/HR-EMP-0042/edit')->assertOk()
+            ->assertSee('Performance Appraisal')
+            ->assertSee("appraisals[{$mine->uuid}][appraisal]", false)
+            ->assertSee('Bulk Carrier');
+
+        $this->put('/crew/HR-EMP-0042', [
+            'first_name' => 'Irfandi', 'last_name' => 'Saputra', 'gender' => 'Male',
+            'date_of_birth' => '1990-05-01', 'date_of_joining' => '2026-07-01',
+            'rank' => 'Second Engineer', 'status' => 'Standby',
+            'appraisals' => [
+                $mine->uuid => ['appraisal' => 'Good', 'notes' => 'Steady.'],
+                $theirs->uuid => ['appraisal' => 'Poor', 'notes' => ''],
+            ],
+        ])->assertRedirect(route('crew.index'));
+
+        $this->assertSame('Good', $mine->fresh()->appraisal);
+        $this->assertSame('Steady.', $mine->fresh()->appraisal_notes);
+        $this->assertNull($theirs->fresh()->appraisal);
+    }
+
     public function test_only_the_known_grades_are_accepted(): void
     {
         $berth = $this->berth();

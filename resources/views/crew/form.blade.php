@@ -21,6 +21,18 @@
   $bankAccounts[] = [];
 
   $previewable = fn (?string $path) => filled($path) ? route('erp.file', ['path' => $path]) : null;
+
+  // The sea service record only exists once the crew member does (edit, not create).
+  $seaService = $seaService ?? null;
+  $canAppraise = $canAppraise ?? false;
+  $fmtDate = fn ($value) => $value ? \Illuminate\Support\Carbon::parse($value)->format('d M Y') : '—';
+  $appraisalColors = [
+    'Excellent' => 'bg-green-50 text-green-700 border-green-200',
+    'Very Good' => 'bg-green-50 text-green-700 border-green-200',
+    'Good' => 'bg-sky-50 text-sky-700 border-sky-200',
+    'Fair' => 'bg-amber-50 text-amber-700 border-amber-200',
+    'Poor' => 'bg-rose-50 text-rose-700 border-rose-200',
+  ];
 @endphp
 
 @if($errors->any())
@@ -44,6 +56,9 @@
     <button type="button" data-tab-target="seafarer" class="{{ $tab }}">Seafarer Details &amp; Contacts</button>
     <button type="button" data-tab-target="bank" class="{{ $tab }}">Bank Details</button>
     <button type="button" data-tab-target="certificates" class="{{ $tab }}">Certificates &amp; Documents</button>
+    @if($seaService !== null)
+      <button type="button" data-tab-target="performance-appraisal" class="{{ $tab }}">Performance Appraisal</button>
+    @endif
   </div>
 
 {{-- Overview --}}
@@ -384,5 +399,86 @@
   </div>
 </div>
 </div>
+
+@if($seaService !== null)
+{{-- Performance appraisal: the sea service record, one berth per row; grades save with the form. --}}
+<div data-tab-panel="performance-appraisal" class="space-y-5">
+<div class="bg-panel border border-line rounded-xl shadow-sm overflow-hidden">
+  <div class="flex flex-wrap items-start justify-between gap-3 px-6 pt-6 pb-4">
+    <div>
+      <h2 class="text-sm font-semibold text-slate-900">Sea Service Record</h2>
+      <p class="text-xs text-muted mt-0.5">Every berth through us, latest first. Grades are saved with the form.</p>
+    </div>
+    <span class="text-xs text-muted">{{ $seaService->count() }} {{ Str::plural('contract', $seaService->count()) }}</span>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-[11px] uppercase text-muted tracking-wider bg-slate-50 border-y border-line">
+          <th class="text-left px-6 py-3 font-medium">No.</th>
+          <th class="text-left px-3 py-3 font-medium">Rank</th>
+          <th class="text-left px-3 py-3 font-medium">Ship Name</th>
+          <th class="text-left px-3 py-3 font-medium">Company</th>
+          <th class="text-left px-3 py-3 font-medium">Ship Type</th>
+          <th class="text-right px-3 py-3 font-medium">GRT</th>
+          <th class="text-left px-3 py-3 font-medium">Sign On</th>
+          <th class="text-left px-3 py-3 font-medium">Sign Off</th>
+          <th class="text-left px-6 py-3 font-medium">Appraisal</th>
+        </tr>
+      </thead>
+      <tbody>
+        @forelse($seaService as $berth)
+          @php
+            $ship = $berth->vessel_details ?? [];
+            $grade = old("appraisals.{$berth->uuid}.appraisal", $berth->appraisal);
+            $notes = old("appraisals.{$berth->uuid}.notes", $berth->appraisal_notes);
+          @endphp
+          <tr class="border-b border-line last:border-0 align-top">
+            <td class="px-6 py-3 text-muted tabular-nums">{{ $loop->iteration }}.</td>
+            <td class="px-3 py-3 text-slate-900 font-medium">{{ $berth->rank ?: '—' }}</td>
+            <td class="px-3 py-3 text-slate-900">{{ $ship['vessel_name'] ?? $berth->vessel ?: '—' }}</td>
+            <td class="px-3 py-3 text-slate-600">{{ $ship['principal'] ?? $berth->company ?: '—' }}</td>
+            <td class="px-3 py-3 text-slate-600">{{ $ship['vessel_type'] ?? '—' }}</td>
+            <td class="px-3 py-3 text-slate-600 text-right tabular-nums">{{ filled($ship['gross_tonnage'] ?? null) ? number_format((float) $ship['gross_tonnage']) : '—' }}</td>
+            <td class="px-3 py-3 text-slate-600 whitespace-nowrap">{{ $fmtDate($berth->sign_on_date) }}</td>
+            <td class="px-3 py-3 text-slate-600 whitespace-nowrap">
+              @if($berth->sign_off_date)
+                {{ $fmtDate($berth->sign_off_date) }}
+              @else
+                <span class="chip border bg-green-50 text-green-700 border-green-200">Onboard</span>
+              @endif
+            </td>
+            <td class="px-6 py-3">
+              @if($canAppraise)
+                <div class="flex flex-col gap-1.5 min-w-48">
+                  <select name="appraisals[{{ $berth->uuid }}][appraisal]" class="{{ $input }} py-1">
+                    <option value="">— Not rated —</option>
+                    @foreach(\App\Models\CrewAssignment::APPRAISALS as $option)
+                      <option value="{{ $option }}" @selected($grade === $option)>{{ $option }}</option>
+                    @endforeach
+                  </select>
+                  <input type="text" name="appraisals[{{ $berth->uuid }}][notes]" value="{{ $notes }}" placeholder="Notes (optional)" class="{{ $input }} py-1 text-xs">
+                </div>
+              @else
+                @if($grade)
+                  <span class="chip border {{ $appraisalColors[$grade] ?? 'bg-slate-100 text-slate-600 border-slate-200' }}">{{ $grade }}</span>
+                @else
+                  <span class="text-muted">—</span>
+                @endif
+                @if($notes)
+                  <div class="text-[11px] text-muted mt-1 max-w-56">{{ $notes }}</div>
+                @endif
+              @endif
+            </td>
+          </tr>
+        @empty
+          <tr><td colspan="9" class="px-6 py-10 text-center text-muted">No sea service through us yet. Berths appear here once a crew assignment is signed on.</td></tr>
+        @endforelse
+      </tbody>
+    </table>
+  </div>
+</div>
+</div>
+@endif
 
 </div>
