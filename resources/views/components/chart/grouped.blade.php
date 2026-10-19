@@ -32,26 +32,32 @@
        class="relative h-56 lg:h-64 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand/40"></div>
 </div>
 
-<details class="mt-2 group/t">
-  <summary class="inline-flex items-center gap-1 text-[11px] text-muted hover:text-slate-700 select-none">
-    <span class="transition-transform group-open/t:rotate-90">›</span> View as table
-  </summary>
-  <div class="overflow-x-auto">
-    <table class="mt-2 w-full text-xs">
-      <thead>
-        <tr class="text-muted border-b border-line">
-          <th class="text-left py-1.5 font-medium">Period</th>
-          @foreach($series as $s)<th class="text-right py-1.5 pl-3 font-medium">{{ $s['name'] }}</th>@endforeach
-        </tr>
-      </thead>
-      <tbody>
-        @foreach($labels as $i => $l)
-          <tr class="border-b border-line last:border-0">
-            <td class="py-1.5 text-slate-700 whitespace-nowrap">{{ $l }}</td>
-            @foreach($series as $s)<td class="py-1.5 pl-3 text-right tabular-nums text-slate-900 whitespace-nowrap">{{ $money($s['values'][$i] ?? 0) }}</td>@endforeach
-          </tr>
-        @endforeach
-      </tbody>
-    </table>
-  </div>
-</details>
+@php
+  $hasNotes = collect($notes)->contains(fn ($n) => filled($n));
+
+  $tableColumns = collect([['label' => 'Period', 'align' => 'left']])
+    ->concat(collect($series)->map(fn ($s) => ['label' => $s['name'], 'align' => 'right']))
+    ->when($hasNotes, fn ($c) => $c->push(['label' => 'Note', 'align' => 'left']))
+    ->all();
+
+  $tableRows = collect($labels)->values()->map(function ($l, $i) use ($series, $notes, $money, $hasNotes) {
+    $cells = [$l];
+    foreach ($series as $s) {
+      $cells[] = $money($s['values'][$i] ?? 0);
+    }
+    if ($hasNotes) {
+      $cells[] = $notes[$i] ?? '';
+    }
+    return $cells;
+  })->all();
+
+  $tableTotal = ['Total'];
+  foreach ($series as $s) {
+    $tableTotal[] = $money(array_sum($s['values']));
+  }
+  if ($hasNotes) {
+    $tableTotal[] = '';
+  }
+@endphp
+
+<x-chart.table :columns="$tableColumns" :rows="$tableRows" :total="$tableTotal" :label="$label" />

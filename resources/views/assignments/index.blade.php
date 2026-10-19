@@ -19,9 +19,15 @@
       <h1 class="text-2xl font-semibold text-slate-900">Crew Assignment</h1>
       <p class="text-sm text-muted mt-1">{{ $assignments->total() }} assignments</p>
     </div>
-    @can('assignments.create')
-      <a href="{{ route('assignments.create') }}" class="bg-brand hover:bg-brand-d text-white text-sm font-medium rounded-md px-4 py-2 shadow-sm">+ New Assignment</a>
-    @endcan
+    <div class="flex items-center gap-2">
+      <a href="{{ route('assignments.export', array_filter($filters)) }}"
+         class="bg-white hover:bg-slate-50 border border-line text-slate-700 text-sm rounded-md px-4 py-2 inline-flex items-center gap-1.5">
+        <i data-lucide="file-spreadsheet" class="size-4"></i>Export Excel
+      </a>
+      @can('assignments.create')
+        <a href="{{ route('assignments.create') }}" class="bg-brand hover:bg-brand-d text-white text-sm font-medium rounded-md px-4 py-2 shadow-sm">+ New Assignment</a>
+      @endcan
+    </div>
   </div>
 
   <form method="GET" class="flex flex-wrap gap-2">

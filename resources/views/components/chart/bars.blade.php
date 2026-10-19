@@ -68,16 +68,44 @@
   @endforeach
 </div>
 
-<details class="mt-3 group/t">
-  <summary class="inline-flex items-center gap-1 text-[11px] text-muted hover:text-slate-700 select-none">
-    <span class="transition-transform group-open/t:rotate-90">›</span> View as table
-  </summary>
-  <table class="mt-2 w-full text-xs">
-    <thead><tr class="text-muted border-b border-line"><th class="text-left py-1.5 font-medium">{{ $label }}</th><th class="text-right py-1.5 font-medium capitalize">{{ $unit }}</th></tr></thead>
-    <tbody>
-      @foreach($rows as $row)
-        <tr class="border-b border-line last:border-0"><td class="py-1.5 text-slate-700">{{ $row['label'] }}@php $b = collect($row['segments'] ?? [])->filter(fn ($seg) => $seg['value'] > 0)->map(fn ($seg) => $seg['name'] . ' ' . $seg['value'])->implode(', '); @endphp{{ $b ? ' (' . $b . ')' : '' }}{{ !empty($row['tip']) ? ' — ' . $row['tip'] : '' }}</td><td class="py-1.5 text-right text-slate-900">{{ $row['display'] ?? number_format($row['value']) }}</td></tr>
-      @endforeach
-    </tbody>
-  </table>
-</details>
+@php
+  // The table spells the chart out: one column per stacked segment, the total, and
+  // the tooltip's extra line as a column of its own.
+  $segmentNames = collect($rows)->flatMap(fn ($r) => collect($r['segments'] ?? [])->pluck('name'))->unique()->values();
+  $hasTip = collect($rows)->contains(fn ($r) => !empty($r['tip']));
+  $hasDisplay = collect($rows)->contains(fn ($r) => isset($r['display']));
+  $totalLabel = $unit !== '' ? ucfirst($unit) : 'Total';
+
+  $tableColumns = collect([['label' => $label, 'align' => 'left']])
+    ->concat($segmentNames->map(fn ($n) => ['label' => $n, 'align' => 'right']))
+    ->push(['label' => $segmentNames->isNotEmpty() ? 'Total' : $totalLabel, 'align' => 'right'])
+    ->when($hasTip, fn ($c) => $c->push(['label' => 'Note', 'align' => 'left']))
+    ->all();
+
+  $tableRows = collect($rows)->map(function ($r) use ($segmentNames, $hasTip) {
+    $bySegment = collect($r['segments'] ?? [])->pluck('value', 'name');
+    $cells = [$r['label']];
+    foreach ($segmentNames as $n) {
+      $cells[] = ($bySegment[$n] ?? 0) > 0 ? number_format($bySegment[$n]) : '—';
+    }
+    $cells[] = $r['display'] ?? number_format($r['value']);
+    if ($hasTip) {
+      $cells[] = $r['tip'] ?? '';
+    }
+    return $cells;
+  })->all();
+
+  $tableTotal = null;
+  if (!$hasDisplay) {
+    $tableTotal = ['Total'];
+    foreach ($segmentNames as $n) {
+      $tableTotal[] = number_format(collect($rows)->sum(fn ($r) => collect($r['segments'] ?? [])->firstWhere('name', $n)['value'] ?? 0));
+    }
+    $tableTotal[] = number_format(collect($rows)->sum('value'));
+    if ($hasTip) {
+      $tableTotal[] = '';
+    }
+  }
+@endphp
+
+<x-chart.table :columns="$tableColumns" :rows="$tableRows" :total="$tableTotal" :label="$label" />

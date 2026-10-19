@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\CrewAssignmentExport;
 use App\Models\CrewApplication;
 use App\Models\CrewAssignment;
 use App\Models\CrewCandidate;
@@ -11,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Crew Assignment, plus the Sign On and Sign Off desks that work the same records:
@@ -39,6 +41,22 @@ class CrewAssignmentController extends Controller
             'vessels' => $this->options->vessels(),
             'ranks' => $this->options->ranks(),
         ]);
+    }
+
+    /**
+     * Crew Assignment as an Excel file, honouring the same filters as the list so
+     * what you see is what you get.
+     */
+    public function export(Request $request, CrewAssignmentExport $export): StreamedResponse
+    {
+        Gate::authorize('assignments.viewAny');
+
+        $rows = $this->query($request->only('search', 'status', 'vessel', 'rank'))
+            ->with('candidate:id,candidate_code')
+            ->orderByDesc('id')
+            ->lazy(200);
+
+        return $export->download($rows, 'crew-assignments-'.now()->format('Ymd-His').'.xlsx');
     }
 
     /**

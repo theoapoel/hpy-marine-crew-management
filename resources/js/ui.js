@@ -1,9 +1,9 @@
 import { animate, stagger, hover, press, inView } from 'motion';
 import {
     createIcons, AlarmClock, ArrowDownToLine, ArrowUpFromLine, BookText, BookUser, Building2, Calculator,
-    ClipboardList, Database, FileBadge, HandCoins, Landmark, LayoutDashboard, ListPlus, LogIn, LogOut, Menu, Receipt,
-    Scale, ShieldCheck, Ship, SquareKanban, Stethoscope, TrendingUp, UserCog, UserSearch, Users, Wallet,
-    Workflow, X,
+    ChevronRight, ClipboardList, Database, FileBadge, FileSpreadsheet, HandCoins, Landmark, LayoutDashboard, ListPlus,
+    LogIn, LogOut, Menu, Receipt, Scale, ShieldCheck, Ship, SquareKanban, Stethoscope, TrendingUp, UserCog, UserSearch,
+    Users, Wallet, Workflow, X,
 } from 'lucide';
 import { repeaters, previews, certificateTypes, contracts, pickers } from './forms';
 
@@ -14,9 +14,10 @@ const EASE = [0.22, 1, 0.36, 1];
 function icons() {
     createIcons({
         icons: {
-            AlarmClock, ArrowDownToLine, ArrowUpFromLine, BookText, BookUser, Building2, Calculator, ClipboardList,
-            Database, FileBadge, HandCoins, Landmark, LayoutDashboard, ListPlus, LogIn, LogOut, Menu, Receipt, Scale,
-            ShieldCheck, Ship, SquareKanban, Stethoscope, TrendingUp, UserCog, UserSearch, Users, Wallet, Workflow, X,
+            AlarmClock, ArrowDownToLine, ArrowUpFromLine, BookText, BookUser, Building2, Calculator, ChevronRight,
+            ClipboardList, Database, FileBadge, FileSpreadsheet, HandCoins, Landmark, LayoutDashboard, ListPlus, LogIn,
+            LogOut, Menu, Receipt, Scale, ShieldCheck, Ship, SquareKanban, Stethoscope, TrendingUp, UserCog, UserSearch,
+            Users, Wallet, Workflow, X,
         },
         attrs: { 'stroke-width': 1.75, 'aria-hidden': 'true' },
     });

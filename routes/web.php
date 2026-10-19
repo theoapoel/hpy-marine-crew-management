@@ -76,6 +76,7 @@ Route::middleware(['erpnext', 'erpnext.company'])->group(function () {
     // Crew Assignment, with the sign on / sign off desks over the same records.
     Route::get('sign-on', [CrewAssignmentController::class, 'signOnDesk'])->name('assignments.sign-on');
     Route::get('sign-off', [CrewAssignmentController::class, 'signOffDesk'])->name('assignments.sign-off');
+    Route::get('assignments/export', [CrewAssignmentController::class, 'export'])->name('assignments.export');
     Route::post('assignments/{assignment}/sign-on', [CrewAssignmentController::class, 'signOn'])->name('assignments.do-sign-on');
     Route::post('assignments/{assignment}/sign-off', [CrewAssignmentController::class, 'signOff'])->name('assignments.do-sign-off');
     Route::post('assignments/{assignment}/link', [CrewAssignmentController::class, 'link'])->name('assignments.link');
