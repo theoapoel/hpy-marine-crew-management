@@ -60,6 +60,8 @@ Route::middleware(['erpnext', 'erpnext.company'])->group(function () {
     Route::get('crew/export', [CrewController::class, 'export'])->name('crew.export');
     // Performance Appraisal: grade one berth on a crew member's sea service record.
     Route::post('crew/{crew}/appraisal/{assignment}', [CrewController::class, 'appraise'])->name('crew.appraise');
+    // The CV as a PDF (the agency's Template CV form), to print or download.
+    Route::get('crew/{crew}/cv', [CrewController::class, 'cv'])->name('crew.cv');
     Route::resource('crew', CrewController::class);
 
     // Candidate Pool — lifetime seafarer database, kept locally until promotion.

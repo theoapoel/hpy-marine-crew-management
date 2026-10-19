@@ -63,8 +63,8 @@ class SyncCrewFields extends Command
         ['fieldname' => 'custom_last_salary', 'label' => 'Last Salary', 'fieldtype' => 'Currency', 'options' => 'custom_last_salary_currency'],
     ];
 
-    /** Category per seeded certificate type, for the master's list view. */
-    private const CERTIFICATE_CATEGORIES = [
+    /** Category per seeded certificate type, for the master's list view (and the CV before the master exists). */
+    public const CERTIFICATE_CATEGORIES = [
         'Passport' => 'Identity', 'Seaman Book' => 'Identity', 'Visa' => 'Identity',
         'Medical Certificate' => 'Medical', 'Yellow Fever' => 'Medical',
         'Certificate of Competency' => 'Competency', 'GMDSS / Radio' => 'Competency',

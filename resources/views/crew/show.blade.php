@@ -35,7 +35,17 @@
         </p>
       </div>
     </div>
-    <a href="{{ route('crew.edit', $crew) }}" class="bg-brand hover:bg-brand-d text-white text-sm font-medium rounded-md px-4 py-2 shadow-sm">Edit</a>
+    <div class="flex items-center gap-2">
+      <a href="{{ route('crew.cv', $crew->id) }}" target="_blank"
+         class="bg-white hover:bg-slate-50 border border-line text-slate-700 text-sm rounded-md px-4 py-2 inline-flex items-center gap-1.5">
+        <i data-lucide="printer" class="size-4"></i>Print CV
+      </a>
+      <a href="{{ route('crew.cv', [$crew->id, 'download' => 1]) }}"
+         class="bg-white hover:bg-slate-50 border border-line text-slate-700 text-sm rounded-md px-4 py-2 inline-flex items-center gap-1.5">
+        <i data-lucide="file-down" class="size-4"></i>Download PDF
+      </a>
+      <a href="{{ route('crew.edit', $crew) }}" class="bg-brand hover:bg-brand-d text-white text-sm font-medium rounded-md px-4 py-2 shadow-sm">Edit</a>
+    </div>
   </div>
 
   @php

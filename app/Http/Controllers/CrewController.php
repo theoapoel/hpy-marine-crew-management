@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Exports\CrewExport;
 use App\Models\CrewAssignment;
 use App\Repositories\CrewRepositoryInterface;
+use App\Services\CrewCv;
 use App\Services\Erpnext\ErpnextOptions;
 use App\Services\SeaServiceRecord;
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Support\CrewDocumentTypes;
 use App\Support\Departments;
 use Illuminate\Http\Client\RequestException;
@@ -117,6 +119,20 @@ class CrewController extends Controller
             'seaService' => $seaService->for((string) $crew),
             'canAppraise' => Gate::allows('assignments.update'),
         ]);
+    }
+
+    /**
+     * The crew member's CV as a PDF in the agency's own layout — opened in the browser
+     * to print, or downloaded with ?download=1.
+     */
+    public function cv(Request $request, int|string $crew, CrewCv $cv)
+    {
+        $record = $this->crews->find($crew);
+
+        $pdf = Pdf::loadView('crew.cv', $cv->data($record))->setPaper('a4');
+        $filename = 'CV - '.preg_replace('/[^\w\- ]+/', '', $record->name ?: (string) $crew).'.pdf';
+
+        return $request->boolean('download') ? $pdf->download($filename) : $pdf->stream($filename);
     }
 
     /**
