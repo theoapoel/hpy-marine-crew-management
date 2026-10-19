@@ -40,6 +40,9 @@ class CrewAssignment extends Model
 
     public const STATUSES = ['planned', 'onboard', 'signed_off', 'cancelled'];
 
+    /** Appraisal grades for a contract, best first, as the sea service record prints them. */
+    public const APPRAISALS = ['Excellent', 'Very Good', 'Good', 'Fair', 'Poor'];
+
     public function getRouteKeyName(): string
     {
         return 'uuid';

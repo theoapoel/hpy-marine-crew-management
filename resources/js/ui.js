@@ -456,15 +456,17 @@ function tabs() {
             });
         });
 
-        // A panel holding a field the server rejected wins; otherwise the first one.
+        // A panel holding a field the server rejected wins; then the one named in the
+        // URL hash (so a redirect can land on a tab); otherwise the first one.
         let withError = null;
         (window.__formErrors || []).some((name) => {
             const field = group.querySelector(`[name="${CSS.escape(name)}"]`);
             withError = field ? field.closest('[data-tab-panel]') : null;
             return !!withError;
         });
+        const hashed = [...panels].find((p) => p.dataset.tabPanel === decodeURIComponent(location.hash.slice(1)));
 
-        show(withError ? withError.dataset.tabPanel : (panels[0] ? panels[0].dataset.tabPanel : ''));
+        show(withError ? withError.dataset.tabPanel : hashed ? hashed.dataset.tabPanel : (panels[0] ? panels[0].dataset.tabPanel : ''));
 
         // Native validation cannot focus a hidden field: open its tab first.
         group.addEventListener('invalid', (event) => {

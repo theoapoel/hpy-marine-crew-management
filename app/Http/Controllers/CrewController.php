@@ -3,13 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Exports\CrewExport;
+use App\Models\CrewAssignment;
 use App\Repositories\CrewRepositoryInterface;
 use App\Services\Erpnext\ErpnextOptions;
+use App\Services\SeaServiceRecord;
 use App\Support\CrewDocumentTypes;
 use App\Support\Departments;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -106,9 +110,33 @@ class CrewController extends Controller
         });
     }
 
-    public function show(int|string $crew)
+    public function show(int|string $crew, SeaServiceRecord $seaService)
     {
-        return view('crew.show', ['crew' => $this->crews->find($crew)]);
+        return view('crew.show', [
+            'crew' => $this->crews->find($crew),
+            'seaService' => $seaService->for((string) $crew),
+            'canAppraise' => Gate::allows('assignments.update'),
+        ]);
+    }
+
+    /**
+     * Grade one berth on the sea service record (the Performance Appraisal tab).
+     * The berth must belong to this crew member, so a guessed uuid cannot rate
+     * somebody else's contract.
+     */
+    public function appraise(Request $request, int|string $crew, CrewAssignment $assignment)
+    {
+        Gate::authorize('assignments.update');
+
+        abort_unless($assignment->employee_id === (string) $crew, 404);
+
+        $assignment->update($request->validate([
+            'appraisal' => ['nullable', Rule::in(CrewAssignment::APPRAISALS)],
+            'appraisal_notes' => ['nullable', 'string', 'max:2000'],
+        ]));
+
+        return redirect()->to(route('crew.show', $crew).'#performance-appraisal')
+            ->with('success', "Appraisal saved for {$assignment->vessel}.");
     }
 
     public function edit(int|string $crew)
