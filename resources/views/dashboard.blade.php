@@ -95,8 +95,8 @@
       </div>
       @if($ranks)
         <x-chart.legend :items="$legend($rankDepartments)" class="mb-3" />
-        <x-chart.bars :rows="collect($ranks)->map(fn ($r) => ['label' => $r['name'], 'value' => $r['count'], 'color' => $colors[$r['department']], 'tip' => $r['department']])->all()"
-                      unit="crew" label="Rank" stacked />
+        <x-chart.category-columns :rows="collect($ranks)->map(fn ($r) => ['label' => $r['name'], 'value' => $r['count'], 'color' => $colors[$r['department']], 'tip' => $r['department']])->all()"
+                                  unit="crew" label="Rank" note="Department" />
       @else
         <p class="text-sm text-muted py-8 text-center">Nobody is onboard yet.</p>
       @endif
