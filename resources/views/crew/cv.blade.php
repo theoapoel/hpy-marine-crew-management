@@ -163,7 +163,7 @@
         <td>{{ $v($ship['vessel_type'] ?? null) }}</td>
         <td class="right">{{ filled($ship['gross_tonnage'] ?? null) ? number_format((float) $ship['gross_tonnage']) : '' }}</td>
         <td>{{ $d($b?->sign_on_date) }}</td>
-        <td>{{ $b?->sign_off_date ? $d($b->sign_off_date) : ($b ? 'Onboard' : '') }}</td>
+        <td>{{ $b?->sign_off_date ? $d($b->sign_off_date) : ($b && ! $b->manual ? 'Onboard' : '') }}</td>
       </tr>
     @endfor
   </table>

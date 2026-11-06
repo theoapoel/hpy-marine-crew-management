@@ -54,6 +54,12 @@ class ErpnextCrewRepository implements CrewRepositoryInterface
     /** Family member columns the form edits, one row per person. */
     private const FAMILY_FIELDS = ['relation', 'full_name', 'place_of_birth', 'date_of_birth', 'phone'];
 
+    /** Hand-entered sea service columns, one row per contract. */
+    private const SEA_SERVICE_FIELDS = [
+        'rank', 'vessel_name', 'company_name', 'vessel_type', 'gross_tonnage',
+        'sign_on_date', 'sign_off_date', 'appraisal', 'remarks',
+    ];
+
     /** Columns the crew list needs; a full document is fetched for the detail views. */
     private const LIST_FIELDS = [
         'name', 'employee_name', 'status', 'company', 'designation', 'image',
@@ -345,6 +351,10 @@ class ErpnextCrewRepository implements CrewRepositoryInterface
             ->map(fn ($m) => (object) array_intersect_key($m, array_flip(self::FAMILY_FIELDS)))
             ->all();
 
+        $crew->sea_service = collect($row['custom_sea_service'] ?? [])
+            ->map(fn ($s) => (object) array_intersect_key($s, array_flip(self::SEA_SERVICE_FIELDS)))
+            ->all();
+
         return $crew;
     }
 
@@ -457,6 +467,15 @@ class ErpnextCrewRepository implements CrewRepositoryInterface
             $payload['custom_family_members'] = collect((array) $data['family_members'])
                 ->map(fn ($m) => array_filter(array_intersect_key((array) $m, array_flip(self::FAMILY_FIELDS)), fn ($v) => filled($v)))
                 ->filter(fn ($m) => filled($m['full_name'] ?? null))
+                ->values()
+                ->all();
+        }
+
+        // Hand-entered sea service: the whole table; a row without a ship is a blank form row.
+        if (array_key_exists('sea_service', $data)) {
+            $payload['custom_sea_service'] = collect((array) $data['sea_service'])
+                ->map(fn ($s) => array_filter(array_intersect_key((array) $s, array_flip(self::SEA_SERVICE_FIELDS)), fn ($v) => filled($v)))
+                ->filter(fn ($s) => filled($s['vessel_name'] ?? null))
                 ->values()
                 ->all();
         }

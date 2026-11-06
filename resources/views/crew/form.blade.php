@@ -27,7 +27,11 @@
     ? [['relation' => 'Father'], ['relation' => 'Mother']]
     : [...$familyMembers, []];
 
-  $previewable = fn (?string $path) => filled($path) ? route('erp.file', ['path' => $path]) : null;
+  // Sea service typed in by hand, on the Performance Appraisal tab.
+  $manualSeaService = old('sea_service', collect($crew->sea_service ?? [])->map(fn ($s) => (array) $s)->all());
+  $manualSeaService[] = [];
+
+  $previewable =fn (?string $path) => filled($path) ? route('erp.file', ['path' => $path]) : null;
 
   // The sea service record only exists once the crew member does (edit, not create).
   $seaService = $seaService ?? null;
@@ -529,6 +533,75 @@
         @endforelse
       </tbody>
     </table>
+  </div>
+</div>
+
+{{-- Sea service typed in by hand: other companies, or contracts from before the app. --}}
+<div class="bg-panel border border-line rounded-xl p-6 shadow-sm space-y-4" data-repeater="sea_service">
+  <div class="flex items-center justify-between">
+    <div>
+      <h3 class="text-sm font-semibold text-slate-900">Other Sea Service</h3>
+      <p class="text-[11px] text-muted mt-0.5">Contracts with other companies or from before this system — one row per contract. They join the record above and the CV. Rows without a ship name are not saved.</p>
+    </div>
+    <button type="button" data-repeater-add class="text-xs text-brand hover:text-brand-d font-medium shrink-0">+ Add sea service</button>
+  </div>
+
+  <datalist id="sea-service-ranks">
+    @foreach($ranks as $r)<option value="{{ $r }}"></option>@endforeach
+  </datalist>
+
+  <div data-repeater-rows class="space-y-3">
+    @foreach($manualSeaService as $i => $row)
+      <div data-repeater-row class="border border-line rounded-lg p-4">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-[11px] uppercase tracking-wider text-muted font-semibold">Contract</span>
+          <button type="button" data-repeater-remove class="text-xs text-rose-500 hover:text-rose-600">Remove</button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+          <div class="md:col-span-3 min-w-0">
+            <label class="{{ $label }}">Rank</label>
+            <input type="text" name="sea_service[{{ $i }}][rank]" list="sea-service-ranks" value="{{ $row['rank'] ?? '' }}" class="{{ $input }}">
+          </div>
+          <div class="md:col-span-3 min-w-0">
+            <label class="{{ $label }}">Ship Name</label>
+            <input type="text" name="sea_service[{{ $i }}][vessel_name]" value="{{ $row['vessel_name'] ?? '' }}" class="{{ $input }}">
+          </div>
+          <div class="md:col-span-3 min-w-0">
+            <label class="{{ $label }}">Company</label>
+            <input type="text" name="sea_service[{{ $i }}][company_name]" value="{{ $row['company_name'] ?? '' }}" class="{{ $input }}">
+          </div>
+          <div class="md:col-span-3 min-w-0">
+            <label class="{{ $label }}">Ship Type</label>
+            <input type="text" name="sea_service[{{ $i }}][vessel_type]" value="{{ $row['vessel_type'] ?? '' }}" class="{{ $input }}">
+          </div>
+          <div class="md:col-span-2 min-w-0">
+            <label class="{{ $label }}">GRT</label>
+            <input type="number" name="sea_service[{{ $i }}][gross_tonnage]" min="0" step="any" inputmode="decimal" value="{{ filled($row['gross_tonnage'] ?? null) ? (float) $row['gross_tonnage'] : '' }}" class="{{ $input }} tabular-nums">
+          </div>
+          <div class="md:col-span-2 min-w-0">
+            <label class="{{ $label }}">Sign On</label>
+            <input type="date" name="sea_service[{{ $i }}][sign_on_date]" value="{{ $row['sign_on_date'] ?? '' }}" class="{{ $input }}">
+          </div>
+          <div class="md:col-span-2 min-w-0">
+            <label class="{{ $label }}">Sign Off</label>
+            <input type="date" name="sea_service[{{ $i }}][sign_off_date]" value="{{ $row['sign_off_date'] ?? '' }}" class="{{ $input }}">
+          </div>
+          <div class="md:col-span-2 min-w-0">
+            <label class="{{ $label }}">Appraisal</label>
+            <select name="sea_service[{{ $i }}][appraisal]" class="{{ $input }}">
+              <option value="">— Not rated —</option>
+              @foreach(\App\Models\CrewAssignment::APPRAISALS as $option)
+                <option value="{{ $option }}" @selected(($row['appraisal'] ?? '') === $option)>{{ $option }}</option>
+              @endforeach
+            </select>
+          </div>
+          <div class="md:col-span-4 min-w-0">
+            <label class="{{ $label }}">Remarks</label>
+            <input type="text" name="sea_service[{{ $i }}][remarks]" value="{{ $row['remarks'] ?? '' }}" class="{{ $input }}">
+          </div>
+        </div>
+      </div>
+    @endforeach
   </div>
 </div>
 </div>

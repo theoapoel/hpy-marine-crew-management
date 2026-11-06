@@ -41,6 +41,44 @@ class SeaServiceRecord
     }
 
     /**
+     * The berths plus the sea service typed in by hand on the crew record (contracts
+     * with other companies, or from before we kept assignments), as one list, latest
+     * first. Hand-entered rows are unsaved models flagged `manual`, shaped like a berth
+     * so the views print both the same way.
+     *
+     * @param  Collection<int, CrewAssignment>  $berths
+     * @param  iterable<int, object|array<string, mixed>>  $manual
+     * @return Collection<int, CrewAssignment>
+     */
+    public function withManual(Collection $berths, iterable $manual): Collection
+    {
+        $rows = collect($manual)->map(function ($row) {
+            $row = (array) $row;
+
+            return (new CrewAssignment)->forceFill([
+                'manual' => true,
+                'rank' => $row['rank'] ?? null,
+                'vessel' => $row['vessel_name'] ?? null,
+                'company' => $row['company_name'] ?? null,
+                'sign_on_date' => $row['sign_on_date'] ?? null,
+                'sign_off_date' => $row['sign_off_date'] ?? null,
+                'appraisal' => $row['appraisal'] ?? null,
+                'appraisal_notes' => $row['remarks'] ?? null,
+                'vessel_details' => array_filter([
+                    'vessel_name' => $row['vessel_name'] ?? null,
+                    'principal' => $row['company_name'] ?? null,
+                    'vessel_type' => $row['vessel_type'] ?? null,
+                    'gross_tonnage' => $row['gross_tonnage'] ?? null,
+                ], fn ($v) => filled($v)),
+            ]);
+        });
+
+        return $berths->toBase()->concat($rows)
+            ->sortByDesc(fn (CrewAssignment $b) => $b->sign_on_date?->timestamp ?? 0)
+            ->values();
+    }
+
+    /**
      * Ship particulars keyed by Vessel name.
      *
      * @param  array<int, string>  $names

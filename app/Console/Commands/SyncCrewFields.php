@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Console\Commands\Concerns\ManagesErpDoctypes;
+use App\Models\CrewAssignment;
 use App\Services\Erpnext\ErpnextClient;
 use Illuminate\Console\Command;
 
@@ -35,6 +36,8 @@ class SyncCrewFields extends Command
 
     private const FAMILY_DOCTYPE = 'Employee Family Member';
 
+    private const SEA_SERVICE_DOCTYPE = 'Employee Sea Service';
+
     /**
      * The certificate types a fresh instance starts with — the seed for the master,
      * no longer the list the app offers (that is read from ERP HPY). Passport and
@@ -61,6 +64,7 @@ class SyncCrewFields extends Command
         ['fieldname' => 'custom_contract_end_date', 'label' => 'Contract End Date', 'fieldtype' => 'Date'],
         ['fieldname' => 'custom_certificates', 'label' => 'Certificates', 'fieldtype' => 'Table', 'options' => self::CERT_DOCTYPE],
         ['fieldname' => 'custom_bank_accounts', 'label' => 'Bank Accounts', 'fieldtype' => 'Table', 'options' => self::BANK_DOCTYPE],
+        ['fieldname' => 'custom_sea_service', 'label' => 'Sea Service', 'fieldtype' => 'Table', 'options' => self::SEA_SERVICE_DOCTYPE],
         ['fieldname' => 'custom_family_members', 'label' => 'Family Members', 'fieldtype' => 'Table', 'options' => self::FAMILY_DOCTYPE],
         ['fieldname' => 'custom_last_salary_currency', 'label' => 'Last Salary Currency', 'fieldtype' => 'Link', 'options' => 'Currency'],
         ['fieldname' => 'custom_last_salary', 'label' => 'Last Salary', 'fieldtype' => 'Currency', 'options' => 'custom_last_salary_currency'],
@@ -85,6 +89,7 @@ class SyncCrewFields extends Command
         $this->repoint($client, self::CERT_DOCTYPE, 'certificate_type', self::CERT_TYPE_DOCTYPE);
         $this->ensureBankDoctype($client);
         $this->ensureFamilyDoctype($client);
+        $this->ensureSeaServiceDoctype($client);
         $this->ensureCustomFields($client, $doctype);
 
         return self::SUCCESS;
@@ -93,33 +98,60 @@ class SyncCrewFields extends Command
     /** One row per family member (father, mother, spouse, …), next to the single emergency contact. */
     private function ensureFamilyDoctype(ErpnextClient $client): void
     {
-        $fields = [
+        $this->ensureChildTable($client, self::FAMILY_DOCTYPE, [
             ['fieldname' => 'relation', 'label' => 'Relation', 'fieldtype' => 'Data', 'in_list_view' => 1],
             ['fieldname' => 'full_name', 'label' => 'Name', 'fieldtype' => 'Data', 'reqd' => 1, 'in_list_view' => 1],
             ['fieldname' => 'place_of_birth', 'label' => 'Place of Birth', 'fieldtype' => 'Data', 'in_list_view' => 1],
             ['fieldname' => 'date_of_birth', 'label' => 'Date of Birth', 'fieldtype' => 'Date', 'in_list_view' => 1],
             ['fieldname' => 'phone', 'label' => 'Phone', 'fieldtype' => 'Data', 'in_list_view' => 1],
-        ];
+        ]);
+    }
 
-        if ($client->exists('DocType', self::FAMILY_DOCTYPE)) {
-            // An earlier run may have created the table with fewer columns; add what is missing.
-            $current = $client->get('DocType', self::FAMILY_DOCTYPE)['fields'] ?? [];
+    /**
+     * Sea service typed in by hand: contracts with other companies, or from before the
+     * app kept crew assignments. Free text on purpose — the ship and the rank need not
+     * exist in our masters.
+     */
+    private function ensureSeaServiceDoctype(ErpnextClient $client): void
+    {
+        $this->ensureChildTable($client, self::SEA_SERVICE_DOCTYPE, [
+            ['fieldname' => 'rank', 'label' => 'Rank', 'fieldtype' => 'Data', 'in_list_view' => 1],
+            ['fieldname' => 'vessel_name', 'label' => 'Ship Name', 'fieldtype' => 'Data', 'reqd' => 1, 'in_list_view' => 1],
+            ['fieldname' => 'company_name', 'label' => 'Company', 'fieldtype' => 'Data', 'in_list_view' => 1],
+            ['fieldname' => 'vessel_type', 'label' => 'Ship Type', 'fieldtype' => 'Data'],
+            ['fieldname' => 'gross_tonnage', 'label' => 'GRT', 'fieldtype' => 'Float'],
+            ['fieldname' => 'sign_on_date', 'label' => 'Sign On', 'fieldtype' => 'Date', 'in_list_view' => 1],
+            ['fieldname' => 'sign_off_date', 'label' => 'Sign Off', 'fieldtype' => 'Date', 'in_list_view' => 1],
+            ['fieldname' => 'appraisal', 'label' => 'Appraisal', 'fieldtype' => 'Select', 'options' => "\n" . implode("\n", CrewAssignment::APPRAISALS)],
+            ['fieldname' => 'remarks', 'label' => 'Remarks', 'fieldtype' => 'Small Text'],
+        ]);
+    }
+
+    /**
+     * Create a child table, or add the columns an earlier run did not have yet.
+     *
+     * @param  array<int, array<string, mixed>>  $fields
+     */
+    private function ensureChildTable(ErpnextClient $client, string $doctype, array $fields): void
+    {
+        if ($client->exists('DocType', $doctype)) {
+            $current = $client->get('DocType', $doctype)['fields'] ?? [];
             $missing = array_values(array_filter($fields, fn ($f) => ! in_array($f['fieldname'], array_column($current, 'fieldname'), true)));
 
             if ($missing === []) {
-                $this->line('= ' . self::FAMILY_DOCTYPE . ' (already there)');
+                $this->line("= {$doctype} (already there)");
 
                 return;
             }
 
-            $client->update('DocType', self::FAMILY_DOCTYPE, ['fields' => [...$current, ...$missing]]);
-            $this->info('~ ' . self::FAMILY_DOCTYPE . ' (+ ' . implode(', ', array_column($missing, 'fieldname')) . ')');
+            $client->update('DocType', $doctype, ['fields' => [...$current, ...$missing]]);
+            $this->info("~ {$doctype} (+ " . implode(', ', array_column($missing, 'fieldname')) . ')');
 
             return;
         }
 
         $client->create('DocType', [
-            'name' => self::FAMILY_DOCTYPE,
+            'name' => $doctype,
             'module' => 'HR',
             'custom' => 1,
             'istable' => 1,
@@ -128,7 +160,7 @@ class SyncCrewFields extends Command
             'permissions' => [],
         ]);
 
-        $this->info('+ ' . self::FAMILY_DOCTYPE . ' (child table)');
+        $this->info("+ {$doctype} (child table)");
     }
 
     /** The master behind the certificate type dropdown, seeded with the old fixed list. */

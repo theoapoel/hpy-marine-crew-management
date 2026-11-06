@@ -123,6 +123,53 @@ class CrewSeaServiceTest extends TestCase
         $this->assertNull($theirs->fresh()->appraisal);
     }
 
+    public function test_sea_service_added_by_hand_is_saved_to_erp_and_joins_the_record(): void
+    {
+        $this->get('/crew/HR-EMP-0042/edit')->assertOk()
+            ->assertSee('Other Sea Service')
+            ->assertSee('sea_service[0][vessel_name]', false);
+
+        $this->put('/crew/HR-EMP-0042', [
+            'first_name' => 'Irfandi', 'last_name' => 'Saputra', 'gender' => 'Male',
+            'date_of_birth' => '1990-05-01', 'date_of_joining' => '2026-07-01',
+            'rank' => 'Second Engineer', 'status' => 'Standby',
+            'sea_service' => [
+                ['rank' => 'Fourth Engineer', 'vessel_name' => 'MT Samudra', 'company_name' => 'PT Lain', 'vessel_type' => 'Tanker',
+                    'gross_tonnage' => '5000', 'sign_on_date' => '2019-02-01', 'sign_off_date' => '2019-11-30', 'appraisal' => 'Good', 'remarks' => 'First contract.'],
+                ['rank' => 'Oiler', 'vessel_name' => ''], // blank row
+            ],
+        ])->assertRedirect(route('crew.index'));
+
+        Http::assertSent(fn ($request) => $request->method() === 'PUT'
+            && count($request['custom_sea_service'] ?? []) === 1
+            && $request['custom_sea_service'][0]['vessel_name'] === 'MT Samudra'
+            && $request['custom_sea_service'][0]['appraisal'] === 'Good');
+    }
+
+    public function test_hand_entered_sea_service_lists_with_the_berths_latest_first(): void
+    {
+        $this->berth();
+
+        $record = app(\App\Services\SeaServiceRecord::class);
+        $rows = $record->withManual($record->for('HR-EMP-0042'), [
+            (object) ['rank' => 'Oiler', 'vessel_name' => 'MT Samudra', 'company_name' => 'PT Lain', 'gross_tonnage' => 5000, 'sign_on_date' => '2019-02-01'],
+            (object) ['vessel_name' => 'MV Baru', 'sign_on_date' => '2026-01-05'],
+        ]);
+
+        $this->assertSame(['MV Baru', 'MV Nusantara', 'MT Samudra'], $rows->pluck('vessel')->all());
+        $this->assertTrue($rows[2]->manual);
+        $this->assertSame('PT Lain', $rows[2]->vessel_details['principal']);
+    }
+
+    public function test_a_sign_off_before_the_sign_on_is_refused(): void
+    {
+        $this->put('/crew/HR-EMP-0042', [
+            'first_name' => 'Irfandi', 'gender' => 'Male', 'date_of_birth' => '1990-05-01', 'date_of_joining' => '2026-07-01',
+            'rank' => 'Second Engineer', 'status' => 'Standby',
+            'sea_service' => [['vessel_name' => 'MT Samudra', 'sign_on_date' => '2019-02-01', 'sign_off_date' => '2019-01-01']],
+        ])->assertSessionHasErrors('sea_service.0.sign_off_date');
+    }
+
     public function test_only_the_known_grades_are_accepted(): void
     {
         $berth = $this->berth();

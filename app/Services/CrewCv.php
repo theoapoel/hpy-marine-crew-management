@@ -73,7 +73,7 @@ class CrewCv
             'seamanBook' => $byType->get('Seaman Book', []),
             'competency' => $certificates->filter(fn ($c) => $categoryOf($c) === 'Competency')->values()->all(),
             'proficiency' => $this->proficiencyRows($certificates->filter(fn ($c) => in_array($categoryOf($c), ['Proficiency', 'Training'], true))),
-            'seaService' => $this->seaService->for((string) $crew->id),
+            'seaService' => $this->seaService->withManual($this->seaService->for((string) $crew->id), $crew->sea_service ?? []),
         ];
     }
 

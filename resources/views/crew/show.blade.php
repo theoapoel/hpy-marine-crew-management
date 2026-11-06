@@ -225,7 +225,7 @@
     <div class="flex flex-wrap items-start justify-between gap-3 px-6 pt-6 pb-4">
       <div>
         <h2 class="text-sm font-semibold text-slate-900">Sea Service Record</h2>
-        <p class="text-xs text-muted mt-0.5">Every berth through us, latest first, with how they did on each.</p>
+        <p class="text-xs text-muted mt-0.5">Every berth through us plus sea service added by hand, latest first, with how they did on each.</p>
       </div>
       <span class="text-xs text-muted">{{ $seaService->count() }} {{ Str::plural('contract', $seaService->count()) }}</span>
     </div>
@@ -255,7 +255,9 @@
               <td class="px-6 py-3 text-muted tabular-nums">{{ $loop->iteration }}.</td>
               <td class="px-3 py-3 text-slate-900 font-medium">{{ $berth->rank ?: '—' }}</td>
               <td class="px-3 py-3 text-slate-900">
-                @if($berth->vessel)
+                @if($berth->manual)
+                  {{ $berth->vessel ?: '—' }}
+                @elseif($berth->vessel)
                   <a href="{{ route('vessels.show', $berth->vessel) }}" class="hover:text-brand">{{ $ship['vessel_name'] ?? $berth->vessel }}</a>
                 @else
                   —
@@ -268,13 +270,17 @@
               <td class="px-3 py-3 text-slate-600 whitespace-nowrap">
                 @if($berth->sign_off_date)
                   {{ $fmt($berth->sign_off_date) }}
+                @elseif($berth->manual)
+                  —
                 @else
                   <span class="chip border bg-green-50 text-green-700 border-green-200">Onboard</span>
                 @endif
               </td>
               @php $field = 'bg-white border border-line rounded-md px-2 text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand'; @endphp
+              {{-- Hand-entered rows are graded on the edit form, where they are typed in. --}}
+              @php $gradeHere = $canAppraise && ! $berth->manual; @endphp
               <td class="px-3 py-3">
-                @if($canAppraise)
+                @if($gradeHere)
                   {{-- The select and the remarks textarea in the next cell both belong to this form. --}}
                   <form method="POST" action="{{ route('crew.appraise', [$crew->id, $berth]) }}" id="{{ $formId }}">
                     @csrf
@@ -292,7 +298,7 @@
                 @endif
               </td>
               <td class="px-6 py-3">
-                @if($canAppraise)
+                @if($gradeHere)
                   <div class="flex items-start gap-2">
                     <textarea name="appraisal_notes" form="{{ $formId }}" rows="2" placeholder="Describe how they performed on this contract"
                               class="{{ $field }} py-1.5 min-w-64 resize-y">{{ $berth->appraisal_notes }}</textarea>
@@ -304,7 +310,7 @@
               </td>
             </tr>
           @empty
-            <tr><td colspan="10" class="px-6 py-10 text-center text-muted">No sea service through us yet. Berths appear here once a crew assignment is signed on.</td></tr>
+            <tr><td colspan="10" class="px-6 py-10 text-center text-muted">No sea service yet. Berths appear here once a crew assignment is signed on; earlier contracts can be added on the edit form.</td></tr>
           @endforelse
         </tbody>
       </table>

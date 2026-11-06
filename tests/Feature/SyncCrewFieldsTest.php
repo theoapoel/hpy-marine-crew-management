@@ -63,6 +63,9 @@ class SyncCrewFieldsTest extends TestCase
         $posted('DocType', fn ($r) => $r['name'] === 'Employee Family Member' && $r['istable'] === 1
             && collect($r['fields'])->pluck('fieldname')->all() === ['relation', 'full_name', 'place_of_birth', 'date_of_birth', 'phone']);
         $posted('Custom Field', fn ($r) => $r['fieldname'] === 'custom_family_members' && $r['options'] === 'Employee Family Member');
+        $posted('DocType', fn ($r) => $r['name'] === 'Employee Sea Service' && $r['istable'] === 1
+            && collect($r['fields'])->pluck('fieldname')->all() === ['rank', 'vessel_name', 'company_name', 'vessel_type', 'gross_tonnage', 'sign_on_date', 'sign_off_date', 'appraisal', 'remarks']);
+        $posted('Custom Field', fn ($r) => $r['fieldname'] === 'custom_sea_service' && $r['options'] === 'Employee Sea Service');
         $posted('Custom Field', fn ($r) => $r['fieldname'] === 'custom_last_salary' && $r['fieldtype'] === 'Currency');
         $posted('Custom Field', fn ($r) => $r['fieldname'] === 'custom_last_salary_currency' && $r['options'] === 'Currency');
     }

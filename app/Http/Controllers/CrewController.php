@@ -114,9 +114,11 @@ class CrewController extends Controller
 
     public function show(int|string $crew, SeaServiceRecord $seaService)
     {
+        $record = $this->crews->find($crew);
+
         return view('crew.show', [
-            'crew' => $this->crews->find($crew),
-            'seaService' => $seaService->for((string) $crew),
+            'crew' => $record,
+            'seaService' => $seaService->withManual($seaService->for((string) $crew), $record->sea_service ?? []),
             'canAppraise' => Gate::allows('assignments.update'),
         ]);
     }
@@ -352,6 +354,18 @@ class CrewController extends Controller
             'family_members.*.place_of_birth' => ['nullable', 'string', 'max:140'],
             'family_members.*.date_of_birth' => ['nullable', 'date', 'before_or_equal:today'],
             'family_members.*.phone' => ['nullable', 'string', 'max:50'],
+
+            // Sea service typed in by hand (child table), on the Performance Appraisal tab
+            'sea_service' => ['nullable', 'array'],
+            'sea_service.*.rank' => ['nullable', 'string', 'max:140'],
+            'sea_service.*.vessel_name' => ['nullable', 'string', 'max:140'],
+            'sea_service.*.company_name' => ['nullable', 'string', 'max:140'],
+            'sea_service.*.vessel_type' => ['nullable', 'string', 'max:140'],
+            'sea_service.*.gross_tonnage' => ['nullable', 'numeric', 'min:0'],
+            'sea_service.*.sign_on_date' => ['nullable', 'date'],
+            'sea_service.*.sign_off_date' => ['nullable', 'date', 'after_or_equal:sea_service.*.sign_on_date'],
+            'sea_service.*.appraisal' => ['nullable', Rule::in(CrewAssignment::APPRAISALS)],
+            'sea_service.*.remarks' => ['nullable', 'string', 'max:2000'],
 
             // Bank (child table) and last salary
             'bank_accounts' => ['nullable', 'array'],

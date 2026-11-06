@@ -15,7 +15,7 @@ marine doctypes (Vessel, Rank, Vessel Certificate). Each command is idempotent.
 
 | Command | Creates |
 | --- | --- |
-| `php artisan erp:sync-crew-fields` | `Crew Certificate Type` master (seeded; `Employee Certificate.certificate_type` links to it), `Employee Certificate` + `Employee Bank Account` + `Employee Family Member` child tables, and the marine custom fields on `Employee` (incl. last salary) |
+| `php artisan erp:sync-crew-fields` | `Crew Certificate Type` master (seeded; `Employee Certificate.certificate_type` links to it), `Employee Certificate` + `Employee Bank Account` + `Employee Family Member` + `Employee Sea Service` child tables, and the marine custom fields on `Employee` (incl. last salary) |
 | `php artisan erp:sync-ranks` | Seafarer ranks in the `Rank` doctype |
 | `php artisan erp:sync-candidate-doctype` | `Crew Candidate` + `Crew Candidate COP` |
 | `php artisan erp:sync-vessel-types` | `Vessel Type` + `Vessel Certificate Type`, and re-points the fields at them |
@@ -33,7 +33,9 @@ onto the standard Employee fields (`passport_number`, `valid_upto`, …,
 rows of `custom_bank_accounts`; the first is also written to `bank_name` /
 `bank_ac_no`, where payroll looks. Family members (father, mother, …) are rows of
 `custom_family_members`, next to the single emergency contact on the standard
-Employee fields. Certificate types are records of
+Employee fields. Sea service typed in by hand (other companies, earlier contracts) is
+rows of `custom_sea_service`; the Performance Appraisal tab and the CV list it
+together with our own crew assignments, which stay in the local database. Certificate types are records of
 `Crew Certificate Type`, added in ERP HPY or with "+ New type" on the crew form.
 
 ## Vessel Profitability
