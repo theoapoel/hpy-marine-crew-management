@@ -128,6 +128,24 @@ class CrewMasterFormTest extends TestCase
             && $request['custom_last_salary_currency'] === 'IDR');
     }
 
+    public function test_family_members_are_saved_as_rows_and_unnamed_ones_are_dropped(): void
+    {
+        $this->fakeErp();
+
+        $this->post('/crew', $this->form(['family_members' => [
+            ['relation' => 'Father', 'full_name' => 'Slamet Santoso', 'place_of_birth' => 'Gresik', 'date_of_birth' => '1960-02-03', 'phone' => '0811111'],
+            ['relation' => 'Mother', 'full_name' => ''], // preset row left empty
+            ['relation' => 'Spouse', 'full_name' => 'Rina'],
+        ]]))->assertRedirect(route('crew.index'));
+
+        Http::assertSent(fn ($request) => $request->method() === 'POST'
+            && str_ends_with($request->url(), '/api/resource/Employee')
+            && $request['custom_family_members'] === [
+                ['relation' => 'Father', 'full_name' => 'Slamet Santoso', 'place_of_birth' => 'Gresik', 'date_of_birth' => '1960-02-03', 'phone' => '0811111'],
+                ['relation' => 'Spouse', 'full_name' => 'Rina'],
+            ]);
+    }
+
     public function test_a_bank_row_needs_a_bank_name(): void
     {
         $this->fakeErp();

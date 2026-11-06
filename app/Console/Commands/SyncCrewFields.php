@@ -33,6 +33,8 @@ class SyncCrewFields extends Command
 
     private const BANK_DOCTYPE = 'Employee Bank Account';
 
+    private const FAMILY_DOCTYPE = 'Employee Family Member';
+
     /**
      * The certificate types a fresh instance starts with — the seed for the master,
      * no longer the list the app offers (that is read from ERP HPY). Passport and
@@ -59,6 +61,7 @@ class SyncCrewFields extends Command
         ['fieldname' => 'custom_contract_end_date', 'label' => 'Contract End Date', 'fieldtype' => 'Date'],
         ['fieldname' => 'custom_certificates', 'label' => 'Certificates', 'fieldtype' => 'Table', 'options' => self::CERT_DOCTYPE],
         ['fieldname' => 'custom_bank_accounts', 'label' => 'Bank Accounts', 'fieldtype' => 'Table', 'options' => self::BANK_DOCTYPE],
+        ['fieldname' => 'custom_family_members', 'label' => 'Family Members', 'fieldtype' => 'Table', 'options' => self::FAMILY_DOCTYPE],
         ['fieldname' => 'custom_last_salary_currency', 'label' => 'Last Salary Currency', 'fieldtype' => 'Link', 'options' => 'Currency'],
         ['fieldname' => 'custom_last_salary', 'label' => 'Last Salary', 'fieldtype' => 'Currency', 'options' => 'custom_last_salary_currency'],
     ];
@@ -81,9 +84,51 @@ class SyncCrewFields extends Command
         $this->ensureCertificateDoctype($client);
         $this->repoint($client, self::CERT_DOCTYPE, 'certificate_type', self::CERT_TYPE_DOCTYPE);
         $this->ensureBankDoctype($client);
+        $this->ensureFamilyDoctype($client);
         $this->ensureCustomFields($client, $doctype);
 
         return self::SUCCESS;
+    }
+
+    /** One row per family member (father, mother, spouse, …), next to the single emergency contact. */
+    private function ensureFamilyDoctype(ErpnextClient $client): void
+    {
+        $fields = [
+            ['fieldname' => 'relation', 'label' => 'Relation', 'fieldtype' => 'Data', 'in_list_view' => 1],
+            ['fieldname' => 'full_name', 'label' => 'Name', 'fieldtype' => 'Data', 'reqd' => 1, 'in_list_view' => 1],
+            ['fieldname' => 'place_of_birth', 'label' => 'Place of Birth', 'fieldtype' => 'Data', 'in_list_view' => 1],
+            ['fieldname' => 'date_of_birth', 'label' => 'Date of Birth', 'fieldtype' => 'Date', 'in_list_view' => 1],
+            ['fieldname' => 'phone', 'label' => 'Phone', 'fieldtype' => 'Data', 'in_list_view' => 1],
+        ];
+
+        if ($client->exists('DocType', self::FAMILY_DOCTYPE)) {
+            // An earlier run may have created the table with fewer columns; add what is missing.
+            $current = $client->get('DocType', self::FAMILY_DOCTYPE)['fields'] ?? [];
+            $missing = array_values(array_filter($fields, fn ($f) => ! in_array($f['fieldname'], array_column($current, 'fieldname'), true)));
+
+            if ($missing === []) {
+                $this->line('= ' . self::FAMILY_DOCTYPE . ' (already there)');
+
+                return;
+            }
+
+            $client->update('DocType', self::FAMILY_DOCTYPE, ['fields' => [...$current, ...$missing]]);
+            $this->info('~ ' . self::FAMILY_DOCTYPE . ' (+ ' . implode(', ', array_column($missing, 'fieldname')) . ')');
+
+            return;
+        }
+
+        $client->create('DocType', [
+            'name' => self::FAMILY_DOCTYPE,
+            'module' => 'HR',
+            'custom' => 1,
+            'istable' => 1,
+            'editable_grid' => 1,
+            'fields' => $fields,
+            'permissions' => [],
+        ]);
+
+        $this->info('+ ' . self::FAMILY_DOCTYPE . ' (child table)');
     }
 
     /** The master behind the certificate type dropdown, seeded with the old fixed list. */

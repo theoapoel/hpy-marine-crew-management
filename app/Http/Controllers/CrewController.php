@@ -345,6 +345,14 @@ class CrewController extends Controller
             'emergency_phone_number' => ['nullable', 'string', 'max:50'],
             'relation' => ['nullable', 'string', 'max:100'],
 
+            // Family (child table): father, mother and whoever else
+            'family_members' => ['nullable', 'array'],
+            'family_members.*.relation' => ['nullable', 'string', 'max:100'],
+            'family_members.*.full_name' => ['nullable', 'string', 'max:140'],
+            'family_members.*.place_of_birth' => ['nullable', 'string', 'max:140'],
+            'family_members.*.date_of_birth' => ['nullable', 'date', 'before_or_equal:today'],
+            'family_members.*.phone' => ['nullable', 'string', 'max:50'],
+
             // Bank (child table) and last salary
             'bank_accounts' => ['nullable', 'array'],
             'bank_accounts.*.bank_name' => ['nullable', 'required_with:bank_accounts.*.account_number', 'string', 'max:140'],

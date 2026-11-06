@@ -20,6 +20,13 @@
   $bankAccounts = old('bank_accounts', collect($crew->bank_accounts ?? [])->map(fn ($a) => (array) $a)->all());
   $bankAccounts[] = [];
 
+  // Family: saved rows plus a blank one; a record without any starts with Father and Mother.
+  $familyRelations = ['Father', 'Mother', 'Spouse', 'Child', 'Sibling', 'Other'];
+  $familyMembers = old('family_members', collect($crew->family_members ?? [])->map(fn ($m) => (array) $m)->all());
+  $familyMembers = $familyMembers === []
+    ? [['relation' => 'Father'], ['relation' => 'Mother']]
+    : [...$familyMembers, []];
+
   $previewable = fn (?string $path) => filled($path) ? route('erp.file', ['path' => $path]) : null;
 
   // The sea service record only exists once the crew member does (edit, not create).
@@ -263,6 +270,51 @@
       <label class="{{ $label }}">Relation</label>
       <input type="text" name="relation" value="{{ $val('relation') }}" class="{{ $input }}">
     </div>
+  </div>
+</div>
+
+<div class="bg-panel border border-line rounded-xl p-6 shadow-sm space-y-4" data-repeater="family_members">
+  <div class="flex items-center justify-between">
+    <div>
+      <h3 class="text-sm font-semibold text-slate-900">Family</h3>
+      <p class="text-[11px] text-muted mt-0.5">Father, mother and other family members — one row per person. Rows without a name are not saved.</p>
+    </div>
+    <button type="button" data-repeater-add class="text-xs text-brand hover:text-brand-d font-medium">+ Add family member</button>
+  </div>
+
+  <div data-repeater-rows class="space-y-3">
+    @foreach($familyMembers as $i => $member)
+      <div data-repeater-row class="grid grid-cols-1 md:grid-cols-12 gap-4 md:items-end">
+        <div class="md:col-span-2 min-w-0">
+          <label class="{{ $label }}">Relation</label>
+          <select name="family_members[{{ $i }}][relation]" class="{{ $input }}">
+            <option value="">—</option>
+            @foreach(collect($familyRelations)->push($member['relation'] ?? null)->filter()->unique() as $r)
+              <option value="{{ $r }}" @selected(($member['relation'] ?? '') === $r)>{{ $r }}</option>
+            @endforeach
+          </select>
+        </div>
+        <div class="md:col-span-3 min-w-0">
+          <label class="{{ $label }}">Name</label>
+          <input type="text" name="family_members[{{ $i }}][full_name]" value="{{ $member['full_name'] ?? '' }}" class="{{ $input }}">
+        </div>
+        <div class="md:col-span-2 min-w-0">
+          <label class="{{ $label }}">Place of Birth</label>
+          <input type="text" name="family_members[{{ $i }}][place_of_birth]" value="{{ $member['place_of_birth'] ?? '' }}" class="{{ $input }}">
+        </div>
+        <div class="md:col-span-2 min-w-0">
+          <label class="{{ $label }}">Date of Birth</label>
+          <input type="date" name="family_members[{{ $i }}][date_of_birth]" value="{{ $member['date_of_birth'] ?? '' }}" class="{{ $input }}">
+        </div>
+        <div class="md:col-span-2 min-w-0">
+          <label class="{{ $label }}">Phone</label>
+          <input type="text" name="family_members[{{ $i }}][phone]" value="{{ $member['phone'] ?? '' }}" class="{{ $input }}">
+        </div>
+        <div class="md:col-span-1 md:pb-2 md:text-right">
+          <button type="button" data-repeater-remove class="text-xs text-rose-500 hover:text-rose-600">Remove</button>
+        </div>
+      </div>
+    @endforeach
   </div>
 </div>
 </div>

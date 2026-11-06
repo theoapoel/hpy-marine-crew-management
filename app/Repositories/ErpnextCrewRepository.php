@@ -51,6 +51,9 @@ class ErpnextCrewRepository implements CrewRepositoryInterface
     /** Bank account columns the form edits, one row per account. */
     private const BANK_FIELDS = ['bank_name', 'account_holder', 'account_number', 'bank_address'];
 
+    /** Family member columns the form edits, one row per person. */
+    private const FAMILY_FIELDS = ['relation', 'full_name', 'place_of_birth', 'date_of_birth', 'phone'];
+
     /** Columns the crew list needs; a full document is fetched for the detail views. */
     private const LIST_FIELDS = [
         'name', 'employee_name', 'status', 'company', 'designation', 'image',
@@ -338,6 +341,10 @@ class ErpnextCrewRepository implements CrewRepositoryInterface
 
         $crew->bank_accounts = $accounts->map(fn ($a) => (object) $a)->all();
 
+        $crew->family_members = collect($row['custom_family_members'] ?? [])
+            ->map(fn ($m) => (object) array_intersect_key($m, array_flip(self::FAMILY_FIELDS)))
+            ->all();
+
         return $crew;
     }
 
@@ -443,6 +450,15 @@ class ErpnextCrewRepository implements CrewRepositoryInterface
             $payload['custom_bank_accounts'] = $accounts->all();
             $payload['bank_name'] = $accounts->first()['bank_name'] ?? '';
             $payload['bank_ac_no'] = $accounts->first()['account_number'] ?? '';
+        }
+
+        // Family members: the whole table; a row without a name is a blank form row.
+        if (array_key_exists('family_members', $data)) {
+            $payload['custom_family_members'] = collect((array) $data['family_members'])
+                ->map(fn ($m) => array_filter(array_intersect_key((array) $m, array_flip(self::FAMILY_FIELDS)), fn ($v) => filled($v)))
+                ->filter(fn ($m) => filled($m['full_name'] ?? null))
+                ->values()
+                ->all();
         }
 
         // Only nulls are dropped: an empty string is how a field gets cleared

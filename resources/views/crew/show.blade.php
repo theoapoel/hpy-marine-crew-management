@@ -106,6 +106,18 @@
           </div>
         @endforeach
       </div>
+
+      @if($loop->last && count($crew->family_members ?? []))
+        <h3 class="text-[11px] uppercase tracking-wider text-muted mt-6 mb-2">Family</h3>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-y-3 gap-x-8 text-sm">
+          @foreach($crew->family_members as $member)
+            <div class="text-slate-500">{{ $member->relation ?? '—' }}</div>
+            <div class="text-slate-800 font-medium">{{ $member->full_name ?? '—' }}</div>
+            <div class="text-slate-800">{{ collect([$member->place_of_birth ?? null, $fmt($member->date_of_birth ?? null)])->filter()->implode(', ') ?: '—' }}</div>
+            <div class="text-slate-800 tabular-nums">{{ $member->phone ?? '—' }}</div>
+          @endforeach
+        </div>
+      @endif
     </div>
   @endforeach
 
